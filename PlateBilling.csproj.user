@@ -17,6 +17,9 @@
     <Compile Update="Views\RatesView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\ReportPreviewWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\ReportsView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>

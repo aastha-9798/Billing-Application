@@ -1,26 +1,62 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using PlateBilling.ViewModels;
 
-namespace PlateBilling.Views
+namespace PlateBilling.Views;
+
+public partial class ReportsView : UserControl
 {
-    /// <summary>
-    /// Interaction logic for ReportsView.xaml
-    /// </summary>
-    public partial class ReportsView : UserControl
+    public ReportsView()
     {
-        public ReportsView()
+        InitializeComponent();
+
+        DataContext = new ReportsViewModel();
+
+        PreviewKeyDown += ReportsView_PreviewKeyDown;
+    }
+
+    private void PreviewPrintButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ShowReportPreview();
+    }
+
+    private void ReportsView_PreviewKeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        if (e.Key == Key.P &&
+            Keyboard.Modifiers == ModifierKeys.Control)
         {
-            InitializeComponent();
+            ShowReportPreview();
+
+            e.Handled = true;
         }
+    }
+
+    private void ShowReportPreview()
+    {
+        if (DataContext is not ReportsViewModel viewModel)
+        {
+            return;
+        }
+
+        string clientName =
+            viewModel.SelectedClientOption?.Name
+            ?? "All Clients";
+
+        var previewWindow =
+            new ReportPreviewWindow(
+                viewModel.Rows,
+                viewModel.ReportPeriod,
+                clientName,
+                viewModel.GrandTotal);
+
+        previewWindow.Owner =
+            Window.GetWindow(this);
+
+        previewWindow.ShowDialog();
     }
 }
