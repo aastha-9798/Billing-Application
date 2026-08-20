@@ -23,6 +23,12 @@ public partial class ChallanView : UserControl
 
         DataContext = new ChallanViewModel();
 
+        // Subscribe to VM property changes to return focus after save/update.
+        if (DataContext is ChallanViewModel vm)
+        {
+            vm.PropertyChanged += ViewModel_PropertyChanged;
+        }
+
         ClientInput.Loaded += ClientInput_Loaded;
         PlateTypeInput.Loaded += PlateTypeInput_Loaded;
 
@@ -35,6 +41,57 @@ public partial class ChallanView : UserControl
         ClientInput.GotKeyboardFocus += ClientInput_GotKeyboardFocus;
         PlateTypeInput.GotKeyboardFocus += PlateTypeInput_GotKeyboardFocus;
     }
+
+    // =========================================================
+    // VM PROPERTY CHANGED
+    // =========================================================
+
+    private void ViewModel_PropertyChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ChallanViewModel.StatusMessage))
+        {
+            return;
+        }
+
+        if (sender is not ChallanViewModel vm)
+        {
+            return;
+        }
+
+        bool savedOrUpdated =
+            vm.StatusMessage == "Challan entry saved successfully." ||
+            vm.StatusMessage == "Challan entry updated successfully.";
+
+        if (!savedOrUpdated)
+        {
+            return;
+        }
+
+        // Scroll to the last entry when a new challan is added.
+        if (vm.StatusMessage == "Challan entry saved successfully." &&
+            vm.Challans.Count > 0)
+        {
+            ChallansGrid.ScrollIntoView(vm.Challans[^1]);
+        }
+
+        // Return focus to ClientInput after a successful save/update
+        // so the user can immediately enter the next challan.
+        Dispatcher.InvokeAsync(() =>
+        {
+            // Clear SelectedItem before focusing so that when the user types,
+            // ClientTextBox_TextChanged sees SelectedItem == null and skips
+            // the Refresh() cycle that would wipe the first typed character.
+            _updatingSearch = true;
+            ClientInput.SelectedItem = null;
+            _updatingSearch = false;
+
+            ClientInput.Focus();
+            _clientTextBox?.SelectAll();
+        }, System.Windows.Threading.DispatcherPriority.Input);
+    }
+
 
     // =========================================================
     // CONNECT TO INTERNAL EDITABLE TEXTBOX
@@ -159,6 +216,12 @@ public partial class ChallanView : UserControl
             return;
         }
 
+        // User is navigating the open dropdown with arrow keys — don't interfere.
+        if (ClientInput.IsDropDownOpen && ClientInput.SelectedItem != null)
+        {
+            return;
+        }
+
         // If user starts typing while an item is selected, clear the
         // selection so the field acts as a fresh search box.
         if (ClientInput.SelectedItem != null)
@@ -242,6 +305,12 @@ public partial class ChallanView : UserControl
         }
 
         if (_plateTypeTextBox == null)
+        {
+            return;
+        }
+
+        // User is navigating the open dropdown with arrow keys — don't interfere.
+        if (PlateTypeInput.IsDropDownOpen && PlateTypeInput.SelectedItem != null)
         {
             return;
         }
