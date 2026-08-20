@@ -26,6 +26,9 @@ public partial class ClientsViewModel : ObservableObject
     private string newClientPhone = string.Empty;
 
     [ObservableProperty]
+    private string newClientAddress = string.Empty;
+
+    [ObservableProperty]
     private string statusMessage = string.Empty;
 
     public ClientsViewModel()
@@ -35,7 +38,7 @@ public partial class ClientsViewModel : ObservableObject
         _ = LoadClientsAsync();
     }
 
-    private async Task LoadClientsAsync()
+    private async Task LoadClientsAsync() //loads clients from the database and populates the Clients collection
     {
         var clients = await _clientService.GetAllAsync();
 
@@ -48,18 +51,19 @@ public partial class ClientsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddClient()
+    private void AddClient() //clears the input fields and prepares the form for adding a new client
     {
         SelectedClient = null;
 
         NewClientName = string.Empty;
         NewClientGSTIN = string.Empty;
         NewClientPhone = string.Empty;
-
+        NewClientAddress = string.Empty;
         StatusMessage = string.Empty;
     }
 
     partial void OnSelectedClientChanged(Client? value)
+        //when a client is selected from the list, populates the input fields with the client's details
     {
         if (value == null)
             return;
@@ -67,6 +71,7 @@ public partial class ClientsViewModel : ObservableObject
         NewClientName = value.Name;
         NewClientGSTIN = value.GSTIN;
         NewClientPhone = value.Phone ?? string.Empty;
+        NewClientAddress = value.Address;
 
         StatusMessage = string.Empty;
     }
@@ -87,6 +92,11 @@ public partial class ClientsViewModel : ObservableObject
             StatusMessage = "GSTIN is required.";
             return;
         }
+        if (string.IsNullOrWhiteSpace(NewClientAddress))
+        {
+            StatusMessage = "Address is required.";
+            return;
+        }
 
         try
         {
@@ -95,7 +105,8 @@ public partial class ClientsViewModel : ObservableObject
                 var client = await _clientService.CreateAsync(
                     NewClientName,
                     NewClientGSTIN,
-                    NewClientPhone);
+                    NewClientPhone,
+                    NewClientAddress);
 
                 Clients.Add(client);
 
@@ -107,7 +118,8 @@ public partial class ClientsViewModel : ObservableObject
                                             SelectedClient.Id,
                                             NewClientName,
                                             NewClientGSTIN,
-                                            NewClientPhone);
+                                            NewClientPhone,
+                                            NewClientAddress);
 
                 int index = Clients.IndexOf(SelectedClient);
 
@@ -124,6 +136,7 @@ public partial class ClientsViewModel : ObservableObject
             NewClientName = string.Empty;
             NewClientGSTIN = string.Empty;
             NewClientPhone = string.Empty;
+            NewClientAddress = string.Empty;
         }
         catch (InvalidOperationException ex)
         {
@@ -157,6 +170,7 @@ public partial class ClientsViewModel : ObservableObject
             NewClientName = string.Empty;
             NewClientGSTIN = string.Empty;
             NewClientPhone = string.Empty;
+            NewClientAddress = string.Empty;
 
             StatusMessage = "Client deleted successfully.";
         }

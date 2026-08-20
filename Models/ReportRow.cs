@@ -4,7 +4,7 @@ public class ReportRow
 {
     public string ClientName { get; set; } = string.Empty;
 
-    public string ChallanNo { get; set; } = string.Empty;
+    public int ChallanNo { get; set; }
 
     public string PlateTypeCode { get; set; } = string.Empty;
 

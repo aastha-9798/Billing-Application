@@ -8,9 +8,11 @@ public class Challan
 
     public int ClientId { get; set; }
 
-    public string ChallanNo { get; set; } = string.Empty;
-    public string PlateDescription { get; set; } = string.Empty;
+    public int ChallanNo { get; set; }
 
+    public DateTime EnteredAt { get; set; }
+
+    public string PlateDescription { get; set; } = string.Empty;
 
     public int PlateTypeId { get; set; }
 

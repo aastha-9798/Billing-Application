@@ -295,17 +295,12 @@
             <Grid>
 
                 <Grid.ColumnDefinitions>
-
+                    <ColumnDefinition Width="1.5*"/>
+                    <ColumnDefinition Width="1.2*"/>
+                    <ColumnDefinition Width="1.2*"/>
                     <ColumnDefinition Width="2*"/>
-
-                    <ColumnDefinition Width="2*"/>
-
-                    <ColumnDefinition Width="2*"/>
-
                     <ColumnDefinition Width="Auto"/>
-
                     <ColumnDefinition Width="Auto"/>
-
                 </Grid.ColumnDefinitions>
 
 
@@ -355,13 +350,29 @@
                                             UpdateSourceTrigger=PropertyChanged}"/>
 
                 </StackPanel>
+                <!-- ================================= -->
+                <!-- Address                            -->
+                <!-- ================================= -->
+
+
+                <StackPanel Grid.Column="3"
+                            Margin="0,0,18,0">
+
+                    <TextBlock Text="Address"
+                                Style="{StaticResource FieldLabelStyle}"/>
+
+                    <TextBox Text="{Binding NewClientAddress,
+                            UpdateSourceTrigger=PropertyChanged}"
+                             Height="42"
+                             FontSize="15"/>
+                </StackPanel>
 
 
                 <!-- ================================= -->
                 <!-- SAVE                               -->
                 <!-- ================================= -->
 
-                <Button Grid.Column="3"
+                <Button Grid.Column="4"
                         Content="Save"
                         Style="{StaticResource ActionButtonStyle}"
                         Width="95"
@@ -374,7 +385,7 @@
                 <!-- DELETE                             -->
                 <!-- ================================= -->
 
-                <Button Grid.Column="4"
+                <Button Grid.Column="5"
                         Content="Delete"
                         Style="{StaticResource SecondaryButtonStyle}"
                         Width="95"
@@ -419,6 +430,9 @@
                     <DataGridTextColumn Header="Phone"
                                         Binding="{Binding Phone}"
                                         Width="1*"/>
+                    <DataGridTextColumn Header="Address"
+                                        Binding="{Binding Address}"
+                                        Width="2*"/>
 
                 </DataGrid.Columns>
 

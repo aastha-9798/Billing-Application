@@ -479,7 +479,7 @@
                                                 Width="70"/>
 
                             <DataGridTextColumn Header="Total"
-                                                Binding="{Binding TotalCost, StringFormat={}{0:₹#,##0.00}}"
+                                                Binding="{Binding TotalCost, StringFormat={}{0:N2}}"
                                                 Width="125"/>
 
                         </DataGrid.Columns>
@@ -718,7 +718,10 @@
 
                                 <TextBox x:Name="ChallanInput"
                                          Text="{Binding ChallanNo,
-                                         UpdateSourceTrigger=PropertyChanged}"/>
+                                         UpdateSourceTrigger=PropertyChanged}"
+                                        PreviewTextInput="ChallanInput_PreviewTextInput"
+                                         DataObject.Pasting="ChallanInput_Pasting"
+                                         PreviewKeyDown="ChallanInput_PreviewKeyDown"/>
 
                             </StackPanel>
 
@@ -825,14 +828,14 @@
                                 <StackPanel Orientation="Horizontal">
 
                                     <TextBlock Text="{Binding CurrentClientRate,
-                                              StringFormat={}{0:₹#,##0.00}}"
+                                              StringFormat={}{0:N2}}"
                                                FontSize="14"
                                                Foreground="{StaticResource SecondaryTextBrush}"
                                                VerticalAlignment="Center"
                                                Margin="0,0,15,0"/>
 
                                     <TextBlock Text="{Binding TotalCost,
-                                              StringFormat={}{0:₹#,##0.00}}"
+                                              StringFormat={}{0:N2}}"
                                                FontSize="22"
                                                FontWeight="Bold"
                                                Foreground="{StaticResource PrimaryTextBrush}"

@@ -32,7 +32,8 @@ namespace PlateBilling.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     GSTIN = table.Column<string>(type: "TEXT", nullable: false),
-                    Phone = table.Column<string>(type: "TEXT", nullable: true)
+                    Phone = table.Column<string>(type: "TEXT", nullable: true),
+                    Address = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -62,7 +63,8 @@ namespace PlateBilling.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     Date = table.Column<DateTime>(type: "TEXT", nullable: false),
                     ClientId = table.Column<int>(type: "INTEGER", nullable: false),
-                    ChallanNo = table.Column<string>(type: "TEXT", nullable: false),
+                    ChallanNo = table.Column<int>(type: "INTEGER", nullable: false),
+                    EnteredAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     PlateDescription = table.Column<string>(type: "TEXT", nullable: false),
                     PlateTypeId = table.Column<int>(type: "INTEGER", nullable: false),
                     Quantity = table.Column<int>(type: "INTEGER", nullable: false),

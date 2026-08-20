@@ -596,4 +596,70 @@ public partial class ChallanView : UserControl
             }
         }
     }
+    // =========================================================
+    // Challan input preview
+    // =========================================================
+    private void ChallanInput_PreviewTextInput(
+    object sender,
+    TextCompositionEventArgs e)
+    {
+        e.Handled = !e.Text.All(char.IsDigit);
+    }
+    // =========================================================
+    // Challan input pasting prevent
+    // =========================================================
+    private void ChallanInput_Pasting(
+    object sender,
+    DataObjectPastingEventArgs e)
+    {
+        if (!e.DataObject.GetDataPresent(typeof(string)))
+        {
+            e.CancelCommand();
+            return;
+        }
+
+        string text =
+            (string)e.DataObject.GetData(typeof(string))!;
+
+        if (!text.All(char.IsDigit))
+        {
+            e.CancelCommand();
+        }
+    }
+
+    // =========================================================
+    // Challan input increment / decrement with up/down keys
+    // =========================================================
+    private void ChallanInput_PreviewKeyDown(
+    object sender,
+    KeyEventArgs e)
+    {
+        if (DataContext is not ChallanViewModel viewModel)
+            return;
+
+        if (e.Key == Key.Up)
+        {
+            if (viewModel.ChallanNo == null)
+            {
+                viewModel.ChallanNo = 1;
+            }
+            else
+            {
+                viewModel.ChallanNo++;
+            }
+
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Down)
+        {
+            if (viewModel.ChallanNo != null &&
+                viewModel.ChallanNo > 1)
+            {
+                viewModel.ChallanNo--;
+            }
+
+            // If empty or already 1, do nothing.
+            e.Handled = true;
+        }
+    }
 }

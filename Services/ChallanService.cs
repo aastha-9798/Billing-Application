@@ -16,9 +16,10 @@ public class ChallanService
 
         return await db.Challans
             .AsNoTracking()
-            .Include(b => b.Client)
-            .Include(b => b.PlateType)
-            .OrderByDescending(b => b.Id)
+            .Include(c => c.Client)
+            .Include(c => c.PlateType)
+            .OrderBy(c => c.ChallanNo)
+            .ThenBy(c => c.EnteredAt)
             .ToListAsync();
     }
 
@@ -30,7 +31,7 @@ public class ChallanService
     public async Task<Challan> CreateAsync(
         DateTime date,
         int clientId,
-        string challanNo,
+        int challanNo,
         string plateDescription,
         int plateTypeId,
         int quantity,
@@ -46,8 +47,9 @@ public class ChallanService
         var challan = new Challan
         {
             Date = date,
+            EnteredAt = DateTime.Now,
             ClientId = clientId,
-            ChallanNo = challanNo.Trim(),
+            ChallanNo = challanNo,
             PlateDescription = plateDescription.Trim(),
             PlateTypeId = plateTypeId,
             Quantity = quantity,
@@ -65,9 +67,9 @@ public class ChallanService
 
         return await db.Challans
             .AsNoTracking()
-            .Include(b => b.Client)
-            .Include(b => b.PlateType)
-            .FirstAsync(b => b.Id == challan.Id);
+            .Include(c => c.Client) //include means that when we retrieve the challan, we also want to retrieve the related Client entity and PlateType entity from the database. This is useful when we want to access properties of the Client and PlateType associated with the challan without making additional database queries.
+            .Include(c => c.PlateType)
+            .FirstAsync(c => c.Id == challan.Id);
     }
 
 
@@ -79,7 +81,7 @@ public class ChallanService
         int id,
         DateTime date,
         int clientId,
-        string challanNo,
+        int challanNo,
         string plateDescription,
         int plateTypeId,
         int quantity,
@@ -93,7 +95,7 @@ public class ChallanService
         using var db = new AppDbContext();
 
         var challan = await db.Challans
-            .FirstOrDefaultAsync(b => b.Id == id);
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         if (challan == null)
         {
@@ -103,7 +105,7 @@ public class ChallanService
 
         challan.Date = date;
         challan.ClientId = clientId;
-        challan.ChallanNo = challanNo.Trim();
+        challan.ChallanNo = challanNo;
         challan.PlateDescription = plateDescription.Trim();
         challan.PlateTypeId = plateTypeId;
         challan.Quantity = quantity;
@@ -118,9 +120,9 @@ public class ChallanService
 
         return await db.Challans
             .AsNoTracking()
-            .Include(b => b.Client)
-            .Include(b => b.PlateType)
-            .FirstAsync(b => b.Id == id);
+            .Include(c => c.Client)
+            .Include(c => c.PlateType)
+            .FirstAsync(c => c.Id == id);
     }
 
 
@@ -133,7 +135,7 @@ public class ChallanService
         using var db = new AppDbContext();
 
         var challan = await db.Challans
-            .FirstOrDefaultAsync(b => b.Id == id);
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         if (challan == null)
         {

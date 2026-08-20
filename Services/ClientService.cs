@@ -19,7 +19,8 @@ public class ClientService
     public async Task<Client> CreateAsync(
         string name,
         string gstin,
-        string? phone)
+        string? phone,
+        string address)
     {
         using var db = new AppDbContext();
 
@@ -41,7 +42,8 @@ public class ClientService
             GSTIN = gstin,
             Phone = string.IsNullOrWhiteSpace(phone)
                 ? null
-                : phone.Trim()
+                : phone.Trim(),
+            Address= address.Trim()
         };
 
         db.Clients.Add(client);
@@ -55,7 +57,8 @@ public class ClientService
        int id,
        string name,
        string gstin,
-       string? phone)
+       string? phone,
+       string address)
     {
         using var db = new AppDbContext();
 
@@ -85,6 +88,7 @@ public class ClientService
         client.Phone = string.IsNullOrWhiteSpace(phone)
             ? null
             : phone.Trim();
+        client.Address = address.Trim();
 
         await db.SaveChangesAsync();
         return client;

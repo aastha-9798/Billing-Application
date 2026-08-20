@@ -180,7 +180,7 @@ public partial class ReportPreviewWindow : Window
                 string[] values =
                 {
                 row.ClientName,
-                row.ChallanNo,
+                row.ChallanNo.ToString(),
                 row.PlateTypeCode,
                 row.Quantity.ToString(),
                 row.Rate.HasValue

@@ -116,12 +116,12 @@
 
                         <DataGridTextColumn Header="Rate"
                                             Binding="{Binding Rate,
-                                                     StringFormat={}{0:₹#,##0.00}}"
+                                                     StringFormat={}{0:N2}}"
                                             Width="110"/>
 
                         <DataGridTextColumn Header="Amount"
                                             Binding="{Binding Amount,
-                                                     StringFormat={}{0:₹#,##0.00}}"
+                                                     StringFormat={}{0:N2}}"
                                             Width="130"/>
 
                     </DataGrid.Columns>

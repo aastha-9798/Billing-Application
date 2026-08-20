@@ -31,8 +31,8 @@ public class ReportService
         var challans = await query.ToListAsync();
 
         challans = challans
-            .OrderBy(c => int.Parse(c.ChallanNo))
-            .ThenBy(c => c.Date)
+            .OrderBy(c => c.ChallanNo)
+            .ThenBy(c => c.EnteredAt)
             .ThenBy(c => c.Id)
             .ToList();
 

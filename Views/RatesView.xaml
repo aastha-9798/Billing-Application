@@ -452,7 +452,7 @@
 
                     <DataGridTextColumn Header="Rate (₹)"
                                         Binding="{Binding Rate,
-                                                  StringFormat={}{0:₹#,##0.00}}"
+                                                  StringFormat={}{0:N2}}"
                                         Width="1*"/>
 
                 </DataGrid.Columns>

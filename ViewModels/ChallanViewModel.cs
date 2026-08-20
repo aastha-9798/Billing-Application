@@ -33,7 +33,7 @@ public partial class ChallanViewModel : ObservableObject
     private Client? selectedClient;
 
     [ObservableProperty]
-    private string challanNo = string.Empty;
+    private int? challanNo;
 
     [ObservableProperty]
     private string plateDescription = string.Empty;
@@ -80,7 +80,7 @@ public partial class ChallanViewModel : ObservableObject
     // CONSTRUCTOR
     // =========================================================
 
-    public ChallanViewModel()
+    public ChallanViewModel() //objects of different services. 
     {
         _clientService = new ClientService();
         _plateTypeService = new PlateTypeService();
@@ -126,14 +126,14 @@ public partial class ChallanViewModel : ObservableObject
 
 
     // =========================================================
-    // LOAD BILLS
+    // LOAD Challans
     // =========================================================
 
     private async Task LoadChallansAsync()
     {
         try
         {
-            var challans = await _challanService.GetAllAsync();
+            var challans = await _challanService.GetAllAsync(); //sorting : challan no -> time
 
             Challans.Clear();
 
@@ -311,9 +311,9 @@ public partial class ChallanViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(ChallanNo))
+        if (ChallanNo is null || ChallanNo <= 0)
         {
-            StatusMessage = "Challan number is required.";
+            StatusMessage = "Challan number must be greater than zero.";
             return;
         }
 
@@ -358,7 +358,9 @@ public partial class ChallanViewModel : ObservableObject
             decimal appliedRate =
                 AreaBilling
                     ? 0m
-                    : clientRate!.Rate;
+                    : clientRate!.Rate; 
+            // Safe to use ! because we already checked for null above.
+            // ! means we are telling the compiler that we are sure this value is not null, so it won't give a warning about possible null reference.
 
 
             // =================================================
@@ -371,7 +373,7 @@ public partial class ChallanViewModel : ObservableObject
                     SelectedChallan.Id,
                     Date,
                     SelectedClient.Id,
-                    ChallanNo,
+                    ChallanNo.Value,
                     PlateDescription,
                     SelectedPlateType.Id,
                     Quantity.Value,
@@ -406,9 +408,11 @@ public partial class ChallanViewModel : ObservableObject
                 // ---------------------------------------------
                 // Prepare for next entry
                 // ---------------------------------------------
-
+                Date = updatedChallan.Date;
+                SelectedClient = updatedChallan.Client;
+                ChallanNo = updatedChallan.ChallanNo +1 ;
                 PlateDescription = string.Empty;
-                SelectedPlateType = null;
+                SelectedPlateType = updatedChallan.PlateType;
                 Quantity = null;
                 AreaBilling = false;
                 TotalCost = 0;
@@ -428,7 +432,7 @@ public partial class ChallanViewModel : ObservableObject
             var challan = await _challanService.CreateAsync(
                 Date,
                 SelectedClient.Id,
-                ChallanNo,
+                ChallanNo.Value,
                 PlateDescription,
                 SelectedPlateType.Id,
                 Quantity.Value,
@@ -440,7 +444,7 @@ public partial class ChallanViewModel : ObservableObject
                 TotalCost);
 
 
-            Challans.Insert(0, challan);
+            Challans.Add(challan);
 
 
             // ---------------------------------------------
@@ -459,7 +463,10 @@ public partial class ChallanViewModel : ObservableObject
             //   Amount
             //   Client Rate
             // ---------------------------------------------
-
+            Date = challan.Date;
+            SelectedClient= challan.Client;
+            SelectedPlateType= challan.PlateType;
+            ChallanNo = challan.ChallanNo+1;
             PlateDescription = string.Empty;
             SelectedPlateType = null;
             Quantity = null;
