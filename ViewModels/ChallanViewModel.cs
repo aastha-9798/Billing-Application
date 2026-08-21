@@ -386,15 +386,29 @@ public partial class ChallanViewModel : ObservableObject
 
 
                 // ---------------------------------------------
-                // Update the existing row in the collection
+                // Remove old row and re-insert at correct
+                // sorted position by ChallanNo / EnteredAt.
                 // ---------------------------------------------
 
-                int index = Challans.IndexOf(SelectedChallan);
+                Challans.Remove(SelectedChallan);
 
-                if (index >= 0)
+                int insertAt = 0;
+                for (int i = 0; i < Challans.Count; i++)
                 {
-                    Challans[index] = updatedChallan;
+                    var c = Challans[i];
+                    if (c.ChallanNo < updatedChallan.ChallanNo ||
+                        (c.ChallanNo == updatedChallan.ChallanNo &&
+                         c.EnteredAt <= updatedChallan.EnteredAt))
+                    {
+                        insertAt = i + 1;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
+
+                Challans.Insert(insertAt, updatedChallan);
 
 
                 // ---------------------------------------------
