@@ -1,10 +1,23 @@
 ﻿<UserControl x:Class="PlateBilling.Views.ReportsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:PlateBilling.Models">
+
+    <UserControl.Resources>
+
+        <!-- Converts ReportType enum value to display string -->
+        <ObjectDataProvider x:Key="ReportTypeNames"
+                            MethodName="GetNames"
+                            ObjectType="{x:Type models:ReportType}"/>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+    </UserControl.Resources>
 
     <Grid Background="#F6F7FB">
 
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -49,18 +62,36 @@
             <Grid>
 
                 <Grid.ColumnDefinitions>
-
-                    <ColumnDefinition Width="2.2*"/>
+                    <ColumnDefinition Width="1.4*"/>
+                    <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="1.2*"/>
                     <ColumnDefinition Width="1.2*"/>
                     <ColumnDefinition Width="Auto"/>
-
                 </Grid.ColumnDefinitions>
+
+
+                <!-- Report Type -->
+
+                <StackPanel Grid.Column="0"
+                            Margin="0,0,18,0">
+
+                    <TextBlock Text="Report Type"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#172033"
+                               Margin="0,0,0,7"/>
+
+                    <ComboBox ItemsSource="{Binding ReportTypes}"
+                              SelectedItem="{Binding SelectedReportType, Mode=TwoWay}"
+                              Height="42"
+                              FontSize="15"/>
+
+                </StackPanel>
 
 
                 <!-- Client -->
 
-                <StackPanel Grid.Column="0"
+                <StackPanel Grid.Column="1"
                             Margin="0,0,18,0">
 
                     <TextBlock Text="Client"
@@ -71,8 +102,7 @@
 
                     <ComboBox ItemsSource="{Binding ClientOptions}"
                               DisplayMemberPath="Name"
-                              SelectedItem="{Binding SelectedClientOption,
-                                                     Mode=TwoWay}"
+                              SelectedItem="{Binding SelectedClientOption, Mode=TwoWay}"
                               Height="42"
                               FontSize="15"/>
 
@@ -81,7 +111,7 @@
 
                 <!-- Start Date -->
 
-                <StackPanel Grid.Column="1"
+                <StackPanel Grid.Column="2"
                             Margin="0,0,18,0">
 
                     <TextBlock Text="Start Date"
@@ -90,8 +120,7 @@
                                Foreground="#172033"
                                Margin="0,0,0,7"/>
 
-                    <DatePicker SelectedDate="{Binding StartDate,
-                                                      Mode=TwoWay}"
+                    <DatePicker SelectedDate="{Binding StartDate, Mode=TwoWay}"
                                 Height="42"
                                 FontSize="15"/>
 
@@ -100,7 +129,7 @@
 
                 <!-- End Date -->
 
-                <StackPanel Grid.Column="2"
+                <StackPanel Grid.Column="3"
                             Margin="0,0,18,0">
 
                     <TextBlock Text="End Date"
@@ -109,17 +138,16 @@
                                Foreground="#172033"
                                Margin="0,0,0,7"/>
 
-                    <DatePicker SelectedDate="{Binding EndDate,
-                                                      Mode=TwoWay}"
+                    <DatePicker SelectedDate="{Binding EndDate, Mode=TwoWay}"
                                 Height="42"
                                 FontSize="15"/>
 
                 </StackPanel>
 
 
-                <!-- Preview -->
+                <!-- Preview / Print -->
 
-                <Button Grid.Column="3"
+                <Button Grid.Column="4"
                         Content="Preview / Print"
                         Width="145"
                         Height="42"
@@ -137,10 +165,43 @@
 
 
         <!-- ================================================= -->
-        <!-- REPORT TABLE                                      -->
+        <!-- CLIENT INFO STRIP (single-client detailed only)   -->
         <!-- ================================================= -->
 
         <Border Grid.Row="2"
+                Background="#EEF2FF"
+                CornerRadius="10"
+                Padding="16,10"
+                Margin="0,0,0,12">
+
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsDetailedReport}" Value="True"/>
+                                <Condition Binding="{Binding IsSingleClient}" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+
+            <TextBlock Text="{Binding ReportClientInfo}"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       Foreground="#3730A3"/>
+
+        </Border>
+
+
+        <!-- ================================================= -->
+        <!-- REPORT TABLE                                      -->
+        <!-- ================================================= -->
+
+        <Border Grid.Row="3"
                 Background="White"
                 CornerRadius="14"
                 Padding="15"
@@ -149,42 +210,98 @@
             <Grid>
 
                 <Grid.RowDefinitions>
-
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
-
                 </Grid.RowDefinitions>
 
 
-                <!-- Report period -->
+                <!-- Report period + error -->
 
                 <TextBlock Grid.Row="0"
                            Text="{Binding ReportPeriod}"
                            FontSize="15"
                            FontWeight="SemiBold"
                            Foreground="#667085"
-                           Margin="5,0,0,12"/>
+                           Margin="5,0,0,6"/>
+
+                <TextBlock Grid.Row="1"
+                           Text="{Binding ErrorMessage}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="#B42318"
+                           Margin="5,0,0,10">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ErrorMessage}"
+                                             Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
 
 
-                <!-- Table -->
+                <!-- =========================================== -->
+                <!-- DETAILED REPORT GRID                        -->
+                <!-- =========================================== -->
 
-                <DataGrid Grid.Row="1"
+                <DataGrid Grid.Row="2"
                           ItemsSource="{Binding Rows}"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
                           CanUserAddRows="False"
                           SelectionMode="Single"
-                          HeadersVisibility="Column">
+                          HeadersVisibility="Column"
+                          Visibility="{Binding IsDetailedReport,
+                                       Converter={StaticResource BoolToVis}}">
 
                     <DataGrid.Columns>
 
+                        <!-- S.No — always visible -->
+                        <DataGridTextColumn Header="S.No"
+                                            Binding="{Binding RowNumber}"
+                                            Width="55"/>
+
+                        <!-- Client Name — only for All Clients -->
                         <DataGridTextColumn Header="Client Name"
                                             Binding="{Binding ClientName}"
-                                            Width="1.5*"/>
+                                            Width="1.5*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Padding" Value="4,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding DataContext.IsSingleClient,
+                                            RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding DataContext.IsSingleClient,
+                                            RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.CellStyle>
+                        </DataGridTextColumn>
 
                         <DataGridTextColumn Header="Challan No."
                                             Binding="{Binding ChallanNo}"
-                                            Width="1.2*"/>
+                                            Width="1*"/>
 
                         <DataGridTextColumn Header="Plate Type"
                                             Binding="{Binding PlateTypeCode}"
@@ -195,13 +312,52 @@
                                             Width="0.9*"/>
 
                         <DataGridTextColumn Header="Rate"
-                                            Binding="{Binding Rate,
-                                                     StringFormat={}{0:₹#,##0.00}}"
+                                            Binding="{Binding Rate, StringFormat={}{0:N2}}"
                                             Width="1*"/>
 
                         <DataGridTextColumn Header="Amount"
-                                            Binding="{Binding Amount,
-                                                     StringFormat={}{0:₹#,##0.00}}"
+                                            Binding="{Binding Amount, StringFormat={}{0:N2}}"
+                                            Width="1.2*"/>
+
+                    </DataGrid.Columns>
+
+                </DataGrid>
+
+
+                <!-- =========================================== -->
+                <!-- CUMULATIVE REPORT GRID                      -->
+                <!-- =========================================== -->
+
+                <DataGrid Grid.Row="2"
+                          ItemsSource="{Binding CumulativeRows}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          CanUserAddRows="False"
+                          SelectionMode="Single"
+                          HeadersVisibility="Column"
+                          Visibility="{Binding IsCumulativeReport,
+                                       Converter={StaticResource BoolToVis}}">
+
+                    <DataGrid.Columns>
+
+                        <DataGridTextColumn Header="S.No"
+                                            Binding="{Binding RowNumber}"
+                                            Width="55"/>
+
+                        <DataGridTextColumn Header="Plate Type"
+                                            Binding="{Binding PlateTypeCode}"
+                                            Width="1.5*"/>
+
+                        <DataGridTextColumn Header="Quantity"
+                                            Binding="{Binding Quantity}"
+                                            Width="1*"/>
+
+                        <DataGridTextColumn Header="Rate"
+                                            Binding="{Binding Rate, StringFormat={}{0:N2}}"
+                                            Width="1*"/>
+
+                        <DataGridTextColumn Header="Amount"
+                                            Binding="{Binding Amount, StringFormat={}{0:N2}}"
                                             Width="1.2*"/>
 
                     </DataGrid.Columns>
@@ -217,7 +373,7 @@
         <!-- GRAND TOTAL                                       -->
         <!-- ================================================= -->
 
-        <Border Grid.Row="3"
+        <Border Grid.Row="4"
                 Background="White"
                 CornerRadius="14"
                 Padding="20">
@@ -225,12 +381,9 @@
             <Grid>
 
                 <Grid.ColumnDefinitions>
-
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
-
                 </Grid.ColumnDefinitions>
-
 
                 <TextBlock Grid.Column="0"
                            Text="Grand Total"
@@ -240,8 +393,7 @@
                            VerticalAlignment="Center"/>
 
                 <TextBlock Grid.Column="1"
-                           Text="{Binding GrandTotal,
-                                          StringFormat={}{0:₹#,##0.00}}"
+                           Text="{Binding GrandTotal, StringFormat={}{0:N2}}"
                            FontSize="24"
                            FontWeight="Bold"
                            Foreground="#172033"

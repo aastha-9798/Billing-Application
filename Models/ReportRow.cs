@@ -2,6 +2,8 @@
 
 public class ReportRow
 {
+    public int RowNumber { get; set; }
+
     public string ClientName { get; set; } = string.Empty;
 
     public int ChallanNo { get; set; }
@@ -10,8 +12,6 @@ public class ReportRow
 
     public int Quantity { get; set; }
 
-    // Null for area-billing rows because the report
-    // does not show a client rate in that case.
     public decimal? Rate { get; set; }
 
     public bool AreaBilling { get; set; }
