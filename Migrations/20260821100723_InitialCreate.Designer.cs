@@ -11,7 +11,7 @@ using PlateBilling.Data;
 namespace PlateBilling.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260819154930_InitialCreate")]
+    [Migration("20260821100723_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -94,10 +94,6 @@ namespace PlateBilling.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("GSTIN")
                         .IsRequired()

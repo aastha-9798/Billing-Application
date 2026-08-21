@@ -4,6 +4,7 @@ using PdfSharpCore.Pdf;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Media;
 using PlateBilling.Models;
 namespace PlateBilling.Views;
 
@@ -257,18 +258,241 @@ public partial class ReportPreviewWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        var printDialog =
-            new System.Windows.Controls.PrintDialog();
+        var printDialog = new System.Windows.Controls.PrintDialog();
 
         if (printDialog.ShowDialog() != true)
         {
             return;
         }
 
-        MessageBox.Show(
-            "Printing will be connected to the formatted report in the next step.",
-            "Print",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        try
+        {
+            PrintReport(printDialog);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Unable to print the report.\n\n{ex.Message}",
+                "Print Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private void PrintReport(
+        System.Windows.Controls.PrintDialog printDialog)
+    {
+        // Use same column layout as PDF export.
+        double[] widths = { 130, 90, 90, 70, 90, 100 };
+        string[] headers =
+        {
+            "Client", "Challan", "Plate", "Qty", "Rate", "Amount"
+        };
+
+        const double left = 40;
+        const double top = 40;
+        const double rowHeight = 22;
+        const double headerRowHeight = 24;
+        const int rowsPerPage = 28;
+
+        double pageWidth = printDialog.PrintableAreaWidth;
+        double pageHeight = printDialog.PrintableAreaHeight;
+
+        var pages = SplitIntoPages(_rows, rowsPerPage);
+
+        var titleTypeface = new Typeface("Arial");
+        var normalTypeface = new Typeface("Arial");
+
+        for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
+        {
+            var visual = new DrawingVisual();
+
+            using (DrawingContext dc = visual.RenderOpen())
+            {
+                double y = top;
+
+                // -------------------------------------------------
+                // Title
+                // -------------------------------------------------
+
+                var titleText = new FormattedText(
+                    "Challan Report",
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    new Typeface(
+                        new FontFamily("Arial"),
+                        FontStyles.Normal,
+                        FontWeights.Bold,
+                        FontStretches.Normal),
+                    18,
+                    Brushes.Black,
+                    VisualTreeHelper.GetDpi(visual).PixelsPerDip);
+
+                dc.DrawText(titleText, new Point(left, y));
+                y += 26;
+
+                // Period + client sub-heading
+                foreach (string line in new[]
+                {
+                    $"Period: {_reportPeriod}",
+                    $"Client: {_clientName}"
+                })
+                {
+                    var subText = new FormattedText(
+                        line,
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        normalTypeface,
+                        11,
+                        Brushes.DimGray,
+                        VisualTreeHelper.GetDpi(visual).PixelsPerDip);
+
+                    dc.DrawText(subText, new Point(left, y));
+                    y += 16;
+                }
+
+                y += 10;
+
+                // -------------------------------------------------
+                // Column headers
+                // -------------------------------------------------
+
+                double x = left;
+
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    dc.DrawRectangle(
+                        new SolidColorBrush(
+                            Color.FromRgb(0xF8, 0xF9, 0xFC)),
+                        new Pen(Brushes.LightGray, 0.5),
+                        new Rect(x, y, widths[i], headerRowHeight));
+
+                    var headerText = new FormattedText(
+                        headers[i],
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface(
+                            new FontFamily("Arial"),
+                            FontStyles.Normal,
+                            FontWeights.Bold,
+                            FontStretches.Normal),
+                        10,
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(visual).PixelsPerDip);
+
+                    dc.DrawText(
+                        headerText,
+                        new Point(x + 5, y + 5));
+
+                    x += widths[i];
+                }
+
+                y += headerRowHeight;
+
+                // -------------------------------------------------
+                // Data rows
+                // -------------------------------------------------
+
+                bool alternate = false;
+
+                foreach (var row in pages[pageIndex])
+                {
+                    x = left;
+
+                    var rowBg = alternate
+                        ? new SolidColorBrush(
+                            Color.FromRgb(0xF8, 0xF9, 0xFC))
+                        : Brushes.White;
+
+                    alternate = !alternate;
+
+                    string[] values =
+                    {
+                        row.ClientName,
+                        row.ChallanNo.ToString(),
+                        row.PlateTypeCode,
+                        row.Quantity.ToString(),
+                        row.Rate.HasValue
+                            ? $"₹{row.Rate.Value:N2}"
+                            : "-",
+                        $"₹{row.Amount:N2}"
+                    };
+
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        dc.DrawRectangle(
+                            rowBg,
+                            new Pen(Brushes.LightGray, 0.5),
+                            new Rect(x, y, widths[i], rowHeight));
+
+                        var cellText = new FormattedText(
+                            values[i],
+                            System.Globalization.CultureInfo.CurrentCulture,
+                            FlowDirection.LeftToRight,
+                            normalTypeface,
+                            10,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(visual).PixelsPerDip);
+
+                        dc.DrawText(
+                            cellText,
+                            new Point(x + 5, y + 4));
+
+                        x += widths[i];
+                    }
+
+                    y += rowHeight;
+                }
+
+                // -------------------------------------------------
+                // Grand total on last page
+                // -------------------------------------------------
+
+                if (pageIndex == pages.Count - 1)
+                {
+                    y += 12;
+
+                    var totalText = new FormattedText(
+                        $"Grand Total:  ₹{_grandTotal:N2}",
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface(
+                            new FontFamily("Arial"),
+                            FontStyles.Normal,
+                            FontWeights.Bold,
+                            FontStretches.Normal),
+                        13,
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(visual).PixelsPerDip);
+
+                    dc.DrawText(
+                        totalText,
+                        new Point(left, y));
+                }
+
+                // -------------------------------------------------
+                // Page number
+                // -------------------------------------------------
+
+                var pageNumText = new FormattedText(
+                    $"Page {pageIndex + 1} of {pages.Count}",
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    normalTypeface,
+                    9,
+                    Brushes.Gray,
+                    VisualTreeHelper.GetDpi(visual).PixelsPerDip);
+
+                dc.DrawText(
+                    pageNumText,
+                    new Point(
+                        left,
+                        pageHeight - 30));
+            }
+
+            printDialog.PrintVisual(
+                visual,
+                $"Challan Report — Page {pageIndex + 1}");
+        }
     }
 }

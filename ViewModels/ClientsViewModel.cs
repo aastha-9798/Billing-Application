@@ -26,9 +26,6 @@ public partial class ClientsViewModel : ObservableObject
     private string newClientPhone = string.Empty;
 
     [ObservableProperty]
-    private string newClientAddress = string.Empty;
-
-    [ObservableProperty]
     private string statusMessage = string.Empty;
 
     public ClientsViewModel()
@@ -58,7 +55,6 @@ public partial class ClientsViewModel : ObservableObject
         NewClientName = string.Empty;
         NewClientGSTIN = string.Empty;
         NewClientPhone = string.Empty;
-        NewClientAddress = string.Empty;
         StatusMessage = string.Empty;
     }
 
@@ -71,7 +67,6 @@ public partial class ClientsViewModel : ObservableObject
         NewClientName = value.Name;
         NewClientGSTIN = value.GSTIN;
         NewClientPhone = value.Phone ?? string.Empty;
-        NewClientAddress = value.Address;
 
         StatusMessage = string.Empty;
     }
@@ -92,11 +87,6 @@ public partial class ClientsViewModel : ObservableObject
             StatusMessage = "GSTIN is required.";
             return;
         }
-        if (string.IsNullOrWhiteSpace(NewClientAddress))
-        {
-            StatusMessage = "Address is required.";
-            return;
-        }
 
         try
         {
@@ -105,8 +95,7 @@ public partial class ClientsViewModel : ObservableObject
                 var client = await _clientService.CreateAsync(
                     NewClientName,
                     NewClientGSTIN,
-                    NewClientPhone,
-                    NewClientAddress);
+                    NewClientPhone);
 
                 Clients.Add(client);
 
@@ -118,8 +107,7 @@ public partial class ClientsViewModel : ObservableObject
                                             SelectedClient.Id,
                                             NewClientName,
                                             NewClientGSTIN,
-                                            NewClientPhone,
-                                            NewClientAddress);
+                                            NewClientPhone);
 
                 int index = Clients.IndexOf(SelectedClient);
 
@@ -136,7 +124,6 @@ public partial class ClientsViewModel : ObservableObject
             NewClientName = string.Empty;
             NewClientGSTIN = string.Empty;
             NewClientPhone = string.Empty;
-            NewClientAddress = string.Empty;
         }
         catch (InvalidOperationException ex)
         {
@@ -170,7 +157,6 @@ public partial class ClientsViewModel : ObservableObject
             NewClientName = string.Empty;
             NewClientGSTIN = string.Empty;
             NewClientPhone = string.Empty;
-            NewClientAddress = string.Empty;
 
             StatusMessage = "Client deleted successfully.";
         }
