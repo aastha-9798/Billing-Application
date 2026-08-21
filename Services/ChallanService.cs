@@ -25,6 +25,30 @@ public class ChallanService
 
 
     // =========================================================
+    // GET BILLS BY DATE RANGE
+    // =========================================================
+
+    public async Task<List<Challan>> GetByDateRangeAsync(
+        DateTime from,
+        DateTime to)
+    {
+        using var db = new AppDbContext();
+
+        DateTime start = from.Date;
+        DateTime end = to.Date.AddDays(1); // exclusive upper bound
+
+        return await db.Challans
+            .AsNoTracking()
+            .Include(c => c.Client)
+            .Include(c => c.PlateType)
+            .Where(c => c.Date >= start && c.Date < end)
+            .OrderBy(c => c.ChallanNo)
+            .ThenBy(c => c.EnteredAt)
+            .ToListAsync();
+    }
+
+
+    // =========================================================
     // CREATE BILL / CHALLAN ENTRY
     // =========================================================
 

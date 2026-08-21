@@ -431,6 +431,8 @@
 
                     <Grid.RowDefinitions>
 
+                        <RowDefinition Height="Auto"/>
+
                         <RowDefinition Height="*"/>
 
                         <RowDefinition Height="Auto"/>
@@ -438,10 +440,47 @@
                     </Grid.RowDefinitions>
 
 
+                    <!-- Filter bar -->
+
+                    <Grid Grid.Row="0"
+                          Margin="0,0,0,12">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="From"
+                                   Style="{StaticResource FieldLabelStyle}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+
+                        <DatePicker Grid.Column="1"
+                                    SelectedDate="{Binding FilterFromDate, Mode=TwoWay}"
+                                    Width="140"
+                                    Margin="0,0,16,0"/>
+
+                        <TextBlock Grid.Column="2"
+                                   Text="To"
+                                   Style="{StaticResource FieldLabelStyle}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+
+                        <DatePicker Grid.Column="3"
+                                    SelectedDate="{Binding FilterToDate, Mode=TwoWay}"
+                                    Width="140"/>
+
+                    </Grid>
+
+
                     <!-- Transaction table -->
 
                     <DataGrid x:Name="ChallansGrid"
-                              Grid.Row="0"
+                              Grid.Row="1"
                               ItemsSource="{Binding Challans}"
                               SelectedItem="{Binding SelectedChallan, Mode=TwoWay}"
                               AutoGenerateColumns="False"
@@ -490,7 +529,7 @@
 
                     <!-- Transaction actions -->
 
-                    <Grid Grid.Row="1"
+                    <Grid Grid.Row="2"
                           Margin="0,12,0,0">
 
                         <Grid.ColumnDefinitions>

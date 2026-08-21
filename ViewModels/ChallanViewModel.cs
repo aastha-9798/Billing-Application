@@ -63,6 +63,32 @@ public partial class ChallanViewModel : ObservableObject
 
 
     // =========================================================
+    // DATE FILTER
+    // =========================================================
+
+    [ObservableProperty]
+    private DateTime filterFromDate =
+        new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+    [ObservableProperty]
+    private DateTime filterToDate =
+        new DateTime(
+            DateTime.Today.Year,
+            DateTime.Today.Month,
+            DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month));
+
+    partial void OnFilterFromDateChanged(DateTime value)
+    {
+        _ = LoadChallansAsync();
+    }
+
+    partial void OnFilterToDateChanged(DateTime value)
+    {
+        _ = LoadChallansAsync();
+    }
+
+
+    // =========================================================
     // EDITING STATE
     // =========================================================
 
@@ -133,7 +159,9 @@ public partial class ChallanViewModel : ObservableObject
     {
         try
         {
-            var challans = await _challanService.GetAllAsync(); //sorting : challan no -> time
+            var challans = await _challanService.GetByDateRangeAsync(
+                FilterFromDate,
+                FilterToDate);
 
             Challans.Clear();
 
