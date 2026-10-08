@@ -326,7 +326,7 @@
                 <StackPanel Grid.Column="1"
                             Margin="0,0,18,0">
 
-                    <TextBlock Text="GSTIN"
+                    <TextBlock Text="GSTIN (optional)"
                                Style="{StaticResource FieldLabelStyle}"/>
 
                     <TextBox Text="{Binding NewClientGSTIN,
@@ -342,7 +342,7 @@
                 <StackPanel Grid.Column="2"
                             Margin="0,0,18,0">
 
-                    <TextBlock Text="Phone"
+                    <TextBlock Text="Phone (optional)"
                                Style="{StaticResource FieldLabelStyle}"/>
 
                     <TextBox Text="{Binding NewClientPhone,
@@ -411,9 +411,6 @@
                     <DataGridTextColumn Header="Phone"
                                         Binding="{Binding Phone}"
                                         Width="1*"/>
-                    <DataGridTextColumn Header="Address"
-                                        Binding="{Binding Address}"
-                                        Width="2*"/>
 
                 </DataGrid.Columns>
 

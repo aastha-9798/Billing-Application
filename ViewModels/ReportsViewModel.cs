@@ -1,60 +1,36 @@
-﻿using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PlateBilling.Models;
 using PlateBilling.Services;
 
 namespace PlateBilling.ViewModels;
 
-public partial class ReportsViewModel : ObservableObject
+public partial class ReportsViewModel : ObservableObject, IRefreshable
 {
-    private readonly ReportService _reportService;
-    private readonly ClientService _clientService;
+    private readonly ReportService _reportService = new();
+    private readonly ClientService _clientService = new();
 
-    public ObservableCollection<ReportRow> Rows { get; } = new();
+    // Filters are applied only after the client list has loaded.
+    private bool _initialized;
 
-    public ObservableCollection<CumulativeReportRow> CumulativeRows { get; } = new();
+    // Each load gets a number; results of older loads are ignored
+    // so quick filter changes cannot show a stale report.
+    private int _loadVersion;
+
+    public ReportType[] ReportTypes { get; } = Enum.GetValues<ReportType>();
 
     public ObservableCollection<ReportClientOption> ClientOptions { get; } = new();
 
-    // Report type options for the ComboBox
-    public ReportType[] ReportTypes { get; } =
-        [ReportType.Detailed, ReportType.Cumulative];
+
+    // =========================================================
+    // FILTERS
+    // =========================================================
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDetailedReport))]
-    [NotifyPropertyChangedFor(nameof(IsCumulativeReport))]
     private ReportType selectedReportType = ReportType.Detailed;
 
-    public bool IsDetailedReport => SelectedReportType == ReportType.Detailed;
-    public bool IsCumulativeReport => SelectedReportType == ReportType.Cumulative;
-
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSingleClient))]
-    [NotifyPropertyChangedFor(nameof(ReportClientInfo))]
     private ReportClientOption? selectedClientOption;
-
-    // True when a specific client (not "All Clients") is selected
-    public bool IsSingleClient =>
-        SelectedClientOption?.ClientId != null;
-
-    // Header line shown for single-client detailed report
-    public string ReportClientInfo
-    {
-        get
-        {
-            if (SelectedClientOption?.ClientId == null)
-                return string.Empty;
-
-            string info = SelectedClientOption.Name;
-
-            if (!string.IsNullOrWhiteSpace(SelectedClientOption.Phone))
-                info += $"  |  {SelectedClientOption.Phone}";
-
-            return info;
-        }
-    }
 
     [ObservableProperty]
     private DateTime startDate;
@@ -62,30 +38,27 @@ public partial class ReportsViewModel : ObservableObject
     [ObservableProperty]
     private DateTime endDate;
 
-    [ObservableProperty]
-    private decimal grandTotal;
+
+    // =========================================================
+    // RESULT
+    // =========================================================
 
     [ObservableProperty]
-    private string reportPeriod = string.Empty;
+    [NotifyPropertyChangedFor(nameof(HasRows))]
+    private Report? currentReport;
 
     [ObservableProperty]
-    private string errorMessage = string.Empty;
+    private string statusMessage = string.Empty;
 
-    private bool _loading;
+    public bool HasRows => CurrentReport?.Rows.Count > 0;
+
 
     public ReportsViewModel()
     {
-        _reportService = new ReportService();
-        _clientService = new ClientService();
-
         DateTime today = DateTime.Today;
 
         StartDate = new DateTime(today.Year, today.Month, 1);
-
-        EndDate = new DateTime(
-            today.Year,
-            today.Month,
-            DateTime.DaysInMonth(today.Year, today.Month));
+        EndDate = StartDate.AddMonths(1).AddDays(-1);
 
         _ = InitializeAsync();
     }
@@ -97,158 +70,138 @@ public partial class ReportsViewModel : ObservableObject
 
     private async Task InitializeAsync()
     {
-        _loading = true;
+        await LoadClientOptionsAsync(selectClientId: null);
+    }
+
+
+    // =========================================================
+    // REFRESH (returning to this screen)
+    // =========================================================
+
+    // Picks up new clients and new challans; the filters stay as they are.
+    public async Task RefreshAsync()
+    {
+        await LoadClientOptionsAsync(SelectedClientOption?.ClientId);
+    }
+
+    private async Task LoadClientOptionsAsync(int? selectClientId)
+    {
+        // Rebuilding the list clears the selection; hold reloads meanwhile.
+        _initialized = false;
 
         try
         {
-            await LoadClientsAsync();
+            var clients = await _clientService.GetAllAsync();
 
-            SelectedClientOption = ClientOptions.FirstOrDefault();
+            ClientOptions.Clear();
 
-            _loading = false;
-
-            await LoadReportAsync();
-        }
-        catch
-        {
-            _loading = false;
-            Rows.Clear();
-            CumulativeRows.Clear();
-            GrandTotal = 0;
-            ReportPeriod = "Unable to load report.";
-        }
-    }
-
-    private async Task LoadClientsAsync()
-    {
-        var clients = await _clientService.GetAllAsync();
-
-        ClientOptions.Clear();
-
-        ClientOptions.Add(new ReportClientOption
-        {
-            ClientId = null,
-            Name = "All Clients"
-        });
-
-        foreach (var client in clients)
-        {
             ClientOptions.Add(new ReportClientOption
             {
-                ClientId = client.Id,
-                Name = client.Name,
-                Phone = client.Phone
+                ClientId = null,
+                Name = "All Clients"
             });
+
+            foreach (var client in clients)
+            {
+                ClientOptions.Add(new ReportClientOption
+                {
+                    ClientId = client.Id,
+                    Name = client.Name,
+                    Phone = client.Phone
+                });
+            }
+
+            SelectedClientOption =
+                ClientOptions.FirstOrDefault(o => o.ClientId == selectClientId)
+                ?? ClientOptions[0];
+        }
+        catch (Exception)
+        {
+            _initialized = true;
+            StatusMessage = "Unable to load clients.";
+            return;
+        }
+
+        _initialized = true;
+
+        await LoadReportAsync();
+    }
+
+
+    // =========================================================
+    // RELOAD ON FILTER CHANGE
+    // =========================================================
+
+    partial void OnSelectedReportTypeChanged(ReportType value) => Reload();
+
+    partial void OnSelectedClientOptionChanged(ReportClientOption? value) => Reload();
+
+    partial void OnStartDateChanged(DateTime value) => Reload();
+
+    partial void OnEndDateChanged(DateTime value) => Reload();
+
+    private void Reload()
+    {
+        if (_initialized)
+        {
+            _ = LoadReportAsync();
         }
     }
 
 
     // =========================================================
-    // PROPERTY CHANGE HANDLERS
-    // =========================================================
-
-    partial void OnSelectedReportTypeChanged(ReportType value)
-    {
-        if (_loading) return;
-        _ = LoadReportAsync();
-    }
-
-    partial void OnSelectedClientOptionChanged(ReportClientOption? value)
-    {
-        if (_loading) return;
-        _ = LoadReportAsync();
-    }
-
-    partial void OnStartDateChanged(DateTime value)
-    {
-        if (_loading) return;
-        _ = LoadReportAsync();
-    }
-
-    partial void OnEndDateChanged(DateTime value)
-    {
-        if (_loading) return;
-        _ = LoadReportAsync();
-    }
-
-
-    // =========================================================
-    // LOAD REPORT
+    // LOAD
     // =========================================================
 
     private async Task LoadReportAsync()
     {
-        ErrorMessage = string.Empty;
+        int version = ++_loadVersion;
+
+        StatusMessage = string.Empty;
+
+        if (SelectedClientOption == null)
+        {
+            CurrentReport = null;
+            StatusMessage = "Select a client.";
+            return;
+        }
+
+        if (EndDate < StartDate)
+        {
+            CurrentReport = null;
+            StatusMessage = "End date cannot be before start date.";
+            return;
+        }
 
         try
         {
-            if (EndDate < StartDate)
+            var report = await _reportService.GenerateAsync(
+                SelectedReportType,
+                StartDate,
+                EndDate,
+                SelectedClientOption);
+
+            if (version != _loadVersion)
             {
-                Rows.Clear();
-                CumulativeRows.Clear();
-                GrandTotal = 0;
-                ReportPeriod = "End date cannot be before start date.";
                 return;
             }
 
-            ReportPeriod =
-                $"{StartDate:dd MMM yyyy}  –  {EndDate:dd MMM yyyy}";
+            CurrentReport = report;
 
-            if (SelectedReportType == ReportType.Detailed)
+            if (report.Rows.Count == 0)
             {
-                await LoadDetailedAsync();
-            }
-            else
-            {
-                await LoadCumulativeAsync();
+                StatusMessage = "No challans found for this period.";
             }
         }
         catch (Exception)
         {
-            Rows.Clear();
-            CumulativeRows.Clear();
-            GrandTotal = 0;
-            ReportPeriod = "Unable to load report.";
+            if (version != _loadVersion)
+            {
+                return;
+            }
+
+            CurrentReport = null;
+            StatusMessage = "Unable to load report.";
         }
-    }
-
-    private async Task LoadDetailedAsync()
-    {
-        int? clientId = SelectedClientOption?.ClientId;
-
-        var rows = await _reportService.GetReportAsync(
-            StartDate, EndDate, clientId);
-
-        Rows.Clear();
-
-        foreach (var row in rows)
-            Rows.Add(row);
-
-        GrandTotal = Math.Round(Rows.Sum(r => r.Amount), 2);
-    }
-
-    private async Task LoadCumulativeAsync()
-    {
-        // Cumulative requires a specific client
-        if (SelectedClientOption?.ClientId == null)
-        {
-            CumulativeRows.Clear();
-            GrandTotal = 0;
-            ErrorMessage =
-                "Select a specific client for the cumulative report.";
-            return;
-        }
-
-        var rows = await _reportService.GetCumulativeReportAsync(
-            StartDate,
-            EndDate,
-            SelectedClientOption.ClientId.Value);
-
-        CumulativeRows.Clear();
-
-        foreach (var row in rows)
-            CumulativeRows.Add(row);
-
-        GrandTotal = Math.Round(CumulativeRows.Sum(r => r.Amount), 2);
     }
 }

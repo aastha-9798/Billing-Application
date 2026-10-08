@@ -6,7 +6,7 @@ using PlateBilling.Services;
 
 namespace PlateBilling.ViewModels;
 
-public partial class ChallanViewModel : ObservableObject
+public partial class ChallanViewModel : ObservableObject, IRefreshable
 {
     private readonly ClientService _clientService;
     private readonly PlateTypeService _plateTypeService;
@@ -20,6 +20,9 @@ public partial class ChallanViewModel : ObservableObject
     public ObservableCollection<PlateType> PlateTypes { get; } = new();
 
     public ObservableCollection<Challan> Challans { get; } = new();
+
+    // Raised after an entry is created or updated, with the saved challan.
+    public event EventHandler<Challan>? EntrySaved;
 
 
     // =========================================================
@@ -147,6 +150,28 @@ public partial class ChallanViewModel : ObservableObject
         catch (Exception)
         {
             StatusMessage = "Unable to load billing data.";
+        }
+    }
+
+
+    // =========================================================
+    // REFRESH (returning to this screen)
+    // =========================================================
+
+    // Picks up clients, plate types and rates changed on other screens.
+    // The form and the challan list are left as they are.
+    public async Task RefreshAsync()
+    {
+        await LoadMasterDataAsync();
+
+        // A rate may have changed: recalculate an entry in progress.
+        // An entry being edited keeps its saved amount.
+        if (!IsEditing &&
+            SelectedClient != null &&
+            SelectedPlateType != null &&
+            Quantity > 0)
+        {
+            await UpdateCalculationAsync();
         }
     }
 
@@ -446,22 +471,12 @@ public partial class ChallanViewModel : ObservableObject
                 SelectedChallan = null;
                 IsEditing = false;
 
-
-                // ---------------------------------------------
-                // Prepare for next entry
-                // ---------------------------------------------
-                Date = updatedChallan.Date;
-                SelectedClient = updatedChallan.Client;
-                ChallanNo = updatedChallan.ChallanNo +1 ;
-                PlateDescription = string.Empty;
-                SelectedPlateType = updatedChallan.PlateType;
-                Quantity = null;
-                AreaBilling = false;
-                TotalCost = 0;
-                CurrentClientRate = null;
+                PrepareNextEntry(updatedChallan);
 
                 StatusMessage =
                     "Challan entry updated successfully.";
+
+                EntrySaved?.Invoke(this, updatedChallan);
 
                 return;
             }
@@ -488,36 +503,12 @@ public partial class ChallanViewModel : ObservableObject
 
             Challans.Add(challan);
 
-
-            // ---------------------------------------------
-            // Reset fields for the next entry.
-            //
-            // Keep:
-            //   Date
-            //   Client
-            //   Challan No.
-            //
-            // Clear:
-            //   Plate Description
-            //   Plate Type
-            //   Quantity
-            //   Area Billing
-            //   Amount
-            //   Client Rate
-            // ---------------------------------------------
-            Date = challan.Date;
-            SelectedClient= challan.Client;
-            SelectedPlateType= challan.PlateType;
-            ChallanNo = challan.ChallanNo+1;
-            PlateDescription = string.Empty;
-            SelectedPlateType = null;
-            Quantity = null;
-            AreaBilling = false;
-            TotalCost = 0;
-            CurrentClientRate = null;
+            PrepareNextEntry(challan);
 
             StatusMessage =
                 "Challan entry saved successfully.";
+
+            EntrySaved?.Invoke(this, challan);
         }
         catch (InvalidOperationException ex)
         {
@@ -559,21 +550,7 @@ public partial class ChallanViewModel : ObservableObject
             SelectedChallan = null;
             IsEditing = false;
 
-            // ---------------------------------------------
-            // Clear editable fields
-            //
-            // Keep:
-            //   Date
-            //   Client
-            //   Challan No.
-            // ---------------------------------------------
-
-            PlateDescription = string.Empty;
-            SelectedPlateType = null;
-            Quantity = null;
-            AreaBilling = false;
-            TotalCost = 0;
-            CurrentClientRate = null;
+            ClearLineFields();
 
             StatusMessage =
                 "Challan entry deleted successfully.";
@@ -601,23 +578,34 @@ public partial class ChallanViewModel : ObservableObject
 
         IsEditing = false;
 
-        // ---------------------------------------------
-        // Clear fields that belong to the selected
-        // transaction.
-        //
-        // Keep:
-        //   Date
-        //   Client
-        //   Challan No.
-        // ---------------------------------------------
+        ClearLineFields();
 
+        StatusMessage = string.Empty;
+    }
+
+
+    // =========================================================
+    // FORM RESET
+    // =========================================================
+
+    // After a save: keep Date and Client, move to the next
+    // challan number and clear the line fields.
+    private void PrepareNextEntry(Challan saved)
+    {
+        ChallanNo = saved.ChallanNo + 1;
+
+        ClearLineFields();
+    }
+
+    // Clears the fields that belong to a single challan line.
+    // Date, Client and Challan No. are kept.
+    private void ClearLineFields()
+    {
         PlateDescription = string.Empty;
         SelectedPlateType = null;
         Quantity = null;
         AreaBilling = false;
         TotalCost = 0;
         CurrentClientRate = null;
-
-        StatusMessage = string.Empty;
     }
 }

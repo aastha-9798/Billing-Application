@@ -1,52 +1,285 @@
-﻿<UserControl x:Class="PlateBilling.Views.ReportsView"
+<UserControl x:Class="PlateBilling.Views.ReportsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:models="clr-namespace:PlateBilling.Models">
+             xmlns:helpers="clr-namespace:PlateBilling.Helpers"
+    xmlns:views="clr-namespace:PlateBilling.Views">
+
+    <!-- Ctrl+S saves PDF, Ctrl+E saves Excel, Ctrl+P prints. -->
+    <UserControl.CommandBindings>
+
+        <CommandBinding Command="ApplicationCommands.Print"
+                        CanExecute="Export_CanExecute"
+                        Executed="Print_Executed"/>
+
+        <CommandBinding Command="ApplicationCommands.Save"
+                        CanExecute="Export_CanExecute"
+                        Executed="SavePdf_Executed"/>
+
+        <CommandBinding Command="{x:Static views:ReportsView.SaveExcelCommand}"
+                        CanExecute="Export_CanExecute"
+                        Executed="SaveExcel_Executed"/>
+
+    </UserControl.CommandBindings>
 
     <UserControl.Resources>
 
-        <!-- Converts ReportType enum value to display string -->
-        <ObjectDataProvider x:Key="ReportTypeNames"
-                            MethodName="GetNames"
-                            ObjectType="{x:Type models:ReportType}"/>
+        <!-- ========================================= -->
+        <!-- COLORS                                    -->
+        <!-- ========================================= -->
 
-        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <SolidColorBrush x:Key="PageBackgroundBrush"
+                         Color="#F6F7FB"/>
+
+        <SolidColorBrush x:Key="PrimaryTextBrush"
+                         Color="#172033"/>
+
+        <SolidColorBrush x:Key="SecondaryTextBrush"
+                         Color="#667085"/>
+
+        <SolidColorBrush x:Key="BorderBrush"
+                         Color="#E4E7EC"/>
+
+        <SolidColorBrush x:Key="AccentBrush"
+                         Color="#4F46E5"/>
+
+        <SolidColorBrush x:Key="DangerBrush"
+                         Color="#B42318"/>
+
+
+        <!-- ========================================= -->
+        <!-- CARD                                      -->
+        <!-- ========================================= -->
+
+        <Style x:Key="CardStyle"
+               TargetType="Border">
+
+            <Setter Property="Background"
+                    Value="White"/>
+
+            <Setter Property="CornerRadius"
+                    Value="14"/>
+
+            <Setter Property="Padding"
+                    Value="20,16"/>
+
+        </Style>
+
+
+        <!-- ========================================= -->
+        <!-- FILTER CONTROLS                           -->
+        <!-- ========================================= -->
+
+        <Style x:Key="FieldLabelStyle"
+               TargetType="TextBlock">
+
+            <Setter Property="FontSize"
+                    Value="15"/>
+
+            <Setter Property="FontWeight"
+                    Value="SemiBold"/>
+
+            <Setter Property="Foreground"
+                    Value="{StaticResource PrimaryTextBrush}"/>
+
+            <Setter Property="Margin"
+                    Value="0,0,0,7"/>
+
+        </Style>
+
+        <Style TargetType="ComboBox">
+
+            <Setter Property="FontSize"
+                    Value="16"/>
+
+            <Setter Property="Height"
+                    Value="44"/>
+
+            <Setter Property="Padding"
+                    Value="10,6"/>
+
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
+
+        </Style>
+
+        <Style TargetType="DatePicker">
+
+            <Setter Property="FontSize"
+                    Value="16"/>
+
+            <Setter Property="Height"
+                    Value="44"/>
+
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
+
+        </Style>
+
+        <Style x:Key="ActionButtonStyle"
+               TargetType="Button">
+
+            <Setter Property="Height"
+                    Value="44"/>
+
+            <Setter Property="MinWidth"
+                    Value="120"/>
+
+            <Setter Property="Padding"
+                    Value="18,0"/>
+
+            <Setter Property="FontSize"
+                    Value="15"/>
+
+            <Setter Property="FontWeight"
+                    Value="SemiBold"/>
+
+            <Setter Property="Foreground"
+                    Value="White"/>
+
+            <Setter Property="Background"
+                    Value="{StaticResource AccentBrush}"/>
+
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+
+            <Setter Property="Cursor"
+                    Value="Hand"/>
+
+            <Style.Triggers>
+
+                <Trigger Property="IsEnabled"
+                         Value="False">
+                    <Setter Property="Opacity"
+                            Value="0.5"/>
+                </Trigger>
+
+            </Style.Triggers>
+
+        </Style>
+
+
+        <!-- ========================================= -->
+        <!-- REPORT TABLE                              -->
+        <!-- ========================================= -->
+
+        <Style TargetType="DataGrid">
+
+            <Setter Property="FontSize"
+                    Value="17"/>
+
+            <Setter Property="Foreground"
+                    Value="{StaticResource PrimaryTextBrush}"/>
+
+            <Setter Property="Background"
+                    Value="White"/>
+
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+
+            <Setter Property="RowHeight"
+                    Value="42"/>
+
+            <Setter Property="GridLinesVisibility"
+                    Value="Horizontal"/>
+
+            <Setter Property="HorizontalGridLinesBrush"
+                    Value="#EEF0F4"/>
+
+            <Setter Property="HeadersVisibility"
+                    Value="Column"/>
+
+            <Setter Property="AlternatingRowBackground"
+                    Value="#FAFBFC"/>
+
+            <Setter Property="AutoGenerateColumns"
+                    Value="False"/>
+
+            <Setter Property="IsReadOnly"
+                    Value="True"/>
+
+            <Setter Property="CanUserAddRows"
+                    Value="False"/>
+
+            <Setter Property="CanUserReorderColumns"
+                    Value="False"/>
+
+            <Setter Property="SelectionMode"
+                    Value="Single"/>
+
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+
+            <Setter Property="FontSize"
+                    Value="15"/>
+
+            <Setter Property="FontWeight"
+                    Value="SemiBold"/>
+
+            <Setter Property="Foreground"
+                    Value="{StaticResource SecondaryTextBrush}"/>
+
+            <Setter Property="Background"
+                    Value="#F2F4F7"/>
+
+            <Setter Property="Padding"
+                    Value="12,10"/>
+
+            <!-- Lets numeric headers right-align with their column. -->
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Stretch"/>
+
+        </Style>
+
+        <Style TargetType="DataGridCell">
+
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+
+            <Style.Triggers>
+
+                <Trigger Property="IsSelected"
+                         Value="True">
+                    <Setter Property="Background"
+                            Value="#EEF2FF"/>
+                    <Setter Property="Foreground"
+                            Value="{StaticResource PrimaryTextBrush}"/>
+                </Trigger>
+
+            </Style.Triggers>
+
+        </Style>
 
     </UserControl.Resources>
 
-    <Grid Background="#F6F7FB">
+
+    <Grid Background="{StaticResource PageBackgroundBrush}">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
 
         <!-- ================================================= -->
-        <!-- HEADER                                            -->
+        <!-- PAGE HEADER                                       -->
         <!-- ================================================= -->
 
-        <Grid Grid.Row="0"
-              Margin="4,0,4,20">
+        <StackPanel Grid.Row="0"
+                    Margin="4,0,4,14">
 
-            <StackPanel>
+            <TextBlock Text="Reports"
+                       FontSize="30"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource PrimaryTextBrush}"/>
 
-                <TextBlock Text="Reports"
-                           FontSize="30"
-                           FontWeight="Bold"
-                           Foreground="#172033"/>
+            <TextBlock Text="Detailed and cumulative plate reports   ·   Ctrl+S save PDF   ·   Ctrl+E save Excel   ·   Ctrl+P print"
+                       FontSize="15"
+                       Foreground="{StaticResource SecondaryTextBrush}"
+                       Margin="0,4,0,0"/>
 
-                <TextBlock Text="View challan transactions and totals"
-                           FontSize="15"
-                           Foreground="#667085"
-                           Margin="0,4,0,0"/>
-
-            </StackPanel>
-
-        </Grid>
+        </StackPanel>
 
 
         <!-- ================================================= -->
@@ -54,110 +287,91 @@
         <!-- ================================================= -->
 
         <Border Grid.Row="1"
-                Background="White"
-                CornerRadius="14"
-                Padding="20"
+                Style="{StaticResource CardStyle}"
                 Margin="0,0,0,12">
 
             <Grid>
 
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.4*"/>
+                    <ColumnDefinition Width="1.3*"/>
                     <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="1.2*"/>
-                    <ColumnDefinition Width="1.2*"/>
+                    <ColumnDefinition Width="1.3*"/>
+                    <ColumnDefinition Width="1.3*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
 
-                <!-- Report Type -->
-
                 <StackPanel Grid.Column="0"
-                            Margin="0,0,18,0">
+                            Margin="0,0,16,0">
 
                     <TextBlock Text="Report Type"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               Foreground="#172033"
-                               Margin="0,0,0,7"/>
+                               Style="{StaticResource FieldLabelStyle}"/>
 
-                    <ComboBox ItemsSource="{Binding ReportTypes}"
-                              SelectedItem="{Binding SelectedReportType, Mode=TwoWay}"
-                              Height="42"
-                              FontSize="15"/>
+                    <ComboBox x:Name="ReportTypeInput"
+                              ItemsSource="{Binding ReportTypes}"
+                              SelectedItem="{Binding SelectedReportType}"/>
 
                 </StackPanel>
 
 
-                <!-- Client -->
-
                 <StackPanel Grid.Column="1"
-                            Margin="0,0,18,0">
+                            Margin="0,0,16,0">
 
                     <TextBlock Text="Client"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               Foreground="#172033"
-                               Margin="0,0,0,7"/>
+                               Style="{StaticResource FieldLabelStyle}"/>
 
                     <ComboBox ItemsSource="{Binding ClientOptions}"
                               DisplayMemberPath="Name"
-                              SelectedItem="{Binding SelectedClientOption, Mode=TwoWay}"
-                              Height="42"
-                              FontSize="15"/>
+                              SelectedItem="{Binding SelectedClientOption}"/>
 
                 </StackPanel>
 
-
-                <!-- Start Date -->
 
                 <StackPanel Grid.Column="2"
-                            Margin="0,0,18,0">
+                            Margin="0,0,16,0">
 
-                    <TextBlock Text="Start Date"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               Foreground="#172033"
-                               Margin="0,0,0,7"/>
+                    <TextBlock Text="From"
+                               Style="{StaticResource FieldLabelStyle}"/>
 
-                    <DatePicker SelectedDate="{Binding StartDate, Mode=TwoWay}"
-                                Height="42"
-                                FontSize="15"/>
+                    <DatePicker SelectedDate="{Binding StartDate}"/>
 
                 </StackPanel>
 
-
-                <!-- End Date -->
 
                 <StackPanel Grid.Column="3"
-                            Margin="0,0,18,0">
+                            Margin="0,0,16,0">
 
-                    <TextBlock Text="End Date"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               Foreground="#172033"
-                               Margin="0,0,0,7"/>
+                    <TextBlock Text="To"
+                               Style="{StaticResource FieldLabelStyle}"/>
 
-                    <DatePicker SelectedDate="{Binding EndDate, Mode=TwoWay}"
-                                Height="42"
-                                FontSize="15"/>
+                    <DatePicker SelectedDate="{Binding EndDate}"/>
 
                 </StackPanel>
 
 
-                <!-- Preview / Print -->
-
                 <Button Grid.Column="4"
-                        Content="Preview / Print"
-                        Width="145"
-                        Height="42"
+                        Content="Save PDF"
+                        Command="ApplicationCommands.Save"
+                        Style="{StaticResource ActionButtonStyle}"
                         VerticalAlignment="Bottom"
-                        Background="#4F46E5"
-                        Foreground="White"
-                        BorderThickness="0"
-                        FontSize="14"
-                        FontWeight="SemiBold"
-                        Click="PreviewPrintButton_Click"/>
+                        Margin="0,0,10,0"/>
+
+                <Button Grid.Column="5"
+                        Content="Save Excel"
+                        Command="{x:Static views:ReportsView.SaveExcelCommand}"
+                        Style="{StaticResource ActionButtonStyle}"
+                        Background="#107C41"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,10,0"/>
+
+                <Button Grid.Column="6"
+                        Content="Print"
+                        Command="ApplicationCommands.Print"
+                        Style="{StaticResource ActionButtonStyle}"
+                        Background="#344054"
+                        VerticalAlignment="Bottom"/>
 
             </Grid>
 
@@ -165,47 +379,11 @@
 
 
         <!-- ================================================= -->
-        <!-- CLIENT INFO STRIP (single-client detailed only)   -->
+        <!-- REPORT                                            -->
         <!-- ================================================= -->
 
         <Border Grid.Row="2"
-                Background="#EEF2FF"
-                CornerRadius="10"
-                Padding="16,10"
-                Margin="0,0,0,12">
-
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Visibility" Value="Collapsed"/>
-                    <Style.Triggers>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding IsDetailedReport}" Value="True"/>
-                                <Condition Binding="{Binding IsSingleClient}" Value="True"/>
-                            </MultiDataTrigger.Conditions>
-                            <Setter Property="Visibility" Value="Visible"/>
-                        </MultiDataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-
-            <TextBlock Text="{Binding ReportClientInfo}"
-                       FontSize="15"
-                       FontWeight="SemiBold"
-                       Foreground="#3730A3"/>
-
-        </Border>
-
-
-        <!-- ================================================= -->
-        <!-- REPORT TABLE                                      -->
-        <!-- ================================================= -->
-
-        <Border Grid.Row="3"
-                Background="White"
-                CornerRadius="14"
-                Padding="15"
-                Margin="0,0,0,12">
+                Style="{StaticResource CardStyle}">
 
             <Grid>
 
@@ -216,192 +394,103 @@
                 </Grid.RowDefinitions>
 
 
-                <!-- Report period + error -->
+                <!-- Title + subtitle (as on the printed page), totals -->
 
-                <TextBlock Grid.Row="0"
-                           Text="{Binding ReportPeriod}"
-                           FontSize="15"
-                           FontWeight="SemiBold"
-                           Foreground="#667085"
-                           Margin="5,0,0,6"/>
+                <Grid Grid.Row="0"
+                      Margin="2,0,0,12">
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0"
+                                VerticalAlignment="Center">
+
+                        <TextBlock Text="{Binding CurrentReport.Title}"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <TextBlock Text="{Binding CurrentReport.Subtitle}"
+                                   FontSize="16"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   Margin="0,2,0,0"/>
+
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"
+                                Margin="24,0,32,0"
+                                VerticalAlignment="Center">
+
+                        <TextBlock Text="Total Quantity"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   HorizontalAlignment="Right"/>
+
+                        <TextBlock Text="{Binding CurrentReport.TotalQuantity, StringFormat={}{0:N0}, FallbackValue=0}"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                   HorizontalAlignment="Right"/>
+
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                VerticalAlignment="Center">
+
+                        <TextBlock Text="Grand Total"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   HorizontalAlignment="Right"/>
+
+                        <TextBlock Text="{Binding CurrentReport.GrandTotal, StringFormat='₹ {0:N2}', FallbackValue='₹ 0.00'}"
+                                   FontSize="26"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                   HorizontalAlignment="Right"/>
+
+                    </StackPanel>
+
+                </Grid>
+
+
+                <!-- Status (empty period, invalid dates, errors) -->
 
                 <TextBlock Grid.Row="1"
-                           Text="{Binding ErrorMessage}"
-                           FontSize="13"
+                           Text="{Binding StatusMessage}"
+                           FontSize="15"
                            FontWeight="SemiBold"
-                           Foreground="#B42318"
-                           Margin="5,0,0,10">
+                           Foreground="{StaticResource DangerBrush}"
+                           Margin="2,0,0,12">
+
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Visible"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding ErrorMessage}"
+                                <DataTrigger Binding="{Binding StatusMessage}"
                                              Value="">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Setter Property="Visibility"
+                                            Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
+
                 </TextBlock>
 
 
-                <!-- =========================================== -->
-                <!-- DETAILED REPORT GRID                        -->
-                <!-- =========================================== -->
+                <!-- Columns come from the report (see ReportGrid). -->
 
                 <DataGrid Grid.Row="2"
-                          ItemsSource="{Binding Rows}"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          CanUserAddRows="False"
-                          SelectionMode="Single"
-                          HeadersVisibility="Column"
-                          Visibility="{Binding IsDetailedReport,
-                                       Converter={StaticResource BoolToVis}}">
-
-                    <DataGrid.Columns>
-
-                        <!-- S.No — always visible -->
-                        <DataGridTextColumn Header="S.No"
-                                            Binding="{Binding RowNumber}"
-                                            Width="55"/>
-
-                        <!-- Client Name — only for All Clients -->
-                        <DataGridTextColumn Header="Client Name"
-                                            Binding="{Binding ClientName}"
-                                            Width="1.5*">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Padding" Value="4,0"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                            <DataGridTextColumn.HeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding DataContext.IsSingleClient,
-                                            RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                     Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </DataGridTextColumn.HeaderStyle>
-                            <DataGridTextColumn.CellStyle>
-                                <Style TargetType="DataGridCell">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding DataContext.IsSingleClient,
-                                            RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                     Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </DataGridTextColumn.CellStyle>
-                        </DataGridTextColumn>
-
-                        <DataGridTextColumn Header="Challan No."
-                                            Binding="{Binding ChallanNo}"
-                                            Width="1*"/>
-
-                        <DataGridTextColumn Header="Plate Type"
-                                            Binding="{Binding PlateTypeCode}"
-                                            Width="1*"/>
-
-                        <DataGridTextColumn Header="Quantity"
-                                            Binding="{Binding Quantity}"
-                                            Width="0.9*"/>
-
-                        <DataGridTextColumn Header="Rate"
-                                            Binding="{Binding Rate, StringFormat={}{0:N2}}"
-                                            Width="1*"/>
-
-                        <DataGridTextColumn Header="Amount"
-                                            Binding="{Binding Amount, StringFormat={}{0:N2}}"
-                                            Width="1.2*"/>
-
-                    </DataGrid.Columns>
-
-                </DataGrid>
-
-
-                <!-- =========================================== -->
-                <!-- CUMULATIVE REPORT GRID                      -->
-                <!-- =========================================== -->
-
-                <DataGrid Grid.Row="2"
-                          ItemsSource="{Binding CumulativeRows}"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          CanUserAddRows="False"
-                          SelectionMode="Single"
-                          HeadersVisibility="Column"
-                          Visibility="{Binding IsCumulativeReport,
-                                       Converter={StaticResource BoolToVis}}">
-
-                    <DataGrid.Columns>
-
-                        <DataGridTextColumn Header="S.No"
-                                            Binding="{Binding RowNumber}"
-                                            Width="55"/>
-
-                        <DataGridTextColumn Header="Plate Type"
-                                            Binding="{Binding PlateTypeCode}"
-                                            Width="1.5*"/>
-
-                        <DataGridTextColumn Header="Quantity"
-                                            Binding="{Binding Quantity}"
-                                            Width="1*"/>
-
-                        <DataGridTextColumn Header="Rate"
-                                            Binding="{Binding Rate, StringFormat={}{0:N2}}"
-                                            Width="1*"/>
-
-                        <DataGridTextColumn Header="Amount"
-                                            Binding="{Binding Amount, StringFormat={}{0:N2}}"
-                                            Width="1.2*"/>
-
-                    </DataGrid.Columns>
-
-                </DataGrid>
+                          helpers:ReportGrid.Report="{Binding CurrentReport}"/>
 
             </Grid>
 
         </Border>
 
-
-        <!-- ================================================= -->
-        <!-- GRAND TOTAL                                       -->
-        <!-- ================================================= -->
-
-        <Border Grid.Row="4"
-                Background="White"
-                CornerRadius="14"
-                Padding="20">
-
-            <Grid>
-
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0"
-                           Text="Grand Total"
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           Foreground="#172033"
-                           VerticalAlignment="Center"/>
-
-                <TextBlock Grid.Column="1"
-                           Text="{Binding GrandTotal, StringFormat={}{0:N2}}"
-                           FontSize="24"
-                           FontWeight="Bold"
-                           Foreground="#172033"
-                           VerticalAlignment="Center"/>
-
-            </Grid>
-
-        </Border>
 
     </Grid>
 

@@ -121,14 +121,6 @@
                             Click="ChallanEntryButton_Click"/>
 
 
-                    <!-- Bill Generation -->
-
-                    <Button x:Name="BillGenerationButton"
-                            Content="Bill Generation"
-                            Style="{StaticResource SidebarButtonStyle}"
-                            Click="BillGenerationButton_Click"/>
-
-
                     <!-- Clients -->
 
                     <Button x:Name="ClientsButton"

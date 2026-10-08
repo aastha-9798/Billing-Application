@@ -13,7 +13,7 @@ public class AppDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite("Data Source=platebilling.db");
+        optionsBuilder.UseSqlite($"Data Source={AppPaths.DatabasePath}");
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,5 +53,12 @@ public class AppDbContext : DbContext
             .HasForeignKey(c => c.PlateTypeId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Challans are always looked up by date range, either for all
+        // clients or for one client, so both stay fast as the table grows.
+        modelBuilder.Entity<Challan>()
+            .HasIndex(c => c.Date);
+
+        modelBuilder.Entity<Challan>()
+            .HasIndex(c => new { c.ClientId, c.Date });
     }
 }

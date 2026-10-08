@@ -82,12 +82,6 @@ public partial class ClientsViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(NewClientGSTIN))
-        {
-            StatusMessage = "GSTIN is required.";
-            return;
-        }
-
         try
         {
             if (SelectedClient == null)

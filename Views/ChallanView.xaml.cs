@@ -1,685 +1,233 @@
+using PlateBilling.Controls;
 using PlateBilling.Models;
 using PlateBilling.ViewModels;
 using System;
-using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace PlateBilling.Views;
 
 public partial class ChallanView : UserControl
 {
-    private TextBox? _clientTextBox;
-    private TextBox? _plateTypeTextBox;
+    private readonly ChallanViewModel _viewModel;
 
-    private bool _updatingSearch;
+    // Order in which Tab / Shift+Tab / Enter move through the entry form.
+    private readonly Control[] _entryFields;
 
     public ChallanView()
     {
         InitializeComponent();
 
-        DataContext = new ChallanViewModel();
+        _viewModel = new ChallanViewModel();
+        DataContext = _viewModel;
 
-        // Subscribe to VM property changes to return focus after save/update.
-        if (DataContext is ChallanViewModel vm)
-        {
-            vm.PropertyChanged += ViewModel_PropertyChanged;
-        }
+        _viewModel.EntrySaved += ViewModel_EntrySaved;
 
-        ClientInput.Loaded += ClientInput_Loaded;
-        PlateTypeInput.Loaded += PlateTypeInput_Loaded;
+        _entryFields =
+        [
+            DateInput,
+            ClientInput,
+            ChallanInput,
+            DescriptionInput,
+            PlateTypeInput,
+            QuantityInput,
+            AreaBillingInput
+        ];
 
-        ClientInput.PreviewMouseLeftButtonDown +=
-            ClientInput_PreviewMouseLeftButtonDown;
+        _lastField = ClientInput;
 
-        PlateTypeInput.PreviewMouseLeftButtonDown +=
-            PlateTypeInput_PreviewMouseLeftButtonDown;
-
-        ClientInput.GotKeyboardFocus += ClientInput_GotKeyboardFocus;
-        PlateTypeInput.GotKeyboardFocus += PlateTypeInput_GotKeyboardFocus;
+        // Also runs when the user comes back to this screen.
+        Loaded += (_, _) => FocusFieldDeferred(_lastField);
     }
 
+    // The entry field last used, focused again when the screen is shown.
+    private Control _lastField;
+
+
     // =========================================================
-    // VM PROPERTY CHANGED
+    // AFTER SAVE / UPDATE
     // =========================================================
 
-    private void ViewModel_PropertyChanged(
-        object? sender,
-        PropertyChangedEventArgs e)
+    private void ViewModel_EntrySaved(object? sender, Challan challan)
     {
-        if (e.PropertyName != nameof(ChallanViewModel.StatusMessage))
-        {
-            return;
-        }
+        ChallansGrid.ScrollIntoView(challan);
 
-        if (sender is not ChallanViewModel vm)
-        {
-            return;
-        }
-
-        bool savedOrUpdated =
-            vm.StatusMessage == "Challan entry saved successfully." ||
-            vm.StatusMessage == "Challan entry updated successfully.";
-
-        if (!savedOrUpdated)
-        {
-            return;
-        }
-
-        // Scroll to the last entry when a new challan is added.
-        if (vm.StatusMessage == "Challan entry saved successfully." &&
-            vm.Challans.Count > 0)
-        {
-            ChallansGrid.ScrollIntoView(vm.Challans[^1]);
-        }
-
-        // Return focus to ClientInput after a successful save/update
-        // so the user can immediately enter the next challan.
-        Dispatcher.InvokeAsync(() =>
-        {
-            // Clear SelectedItem before focusing so that when the user types,
-            // ClientTextBox_TextChanged sees SelectedItem == null and skips
-            // the Refresh() cycle that would wipe the first typed character.
-            _updatingSearch = true;
-            ClientInput.SelectedItem = null;
-            _updatingSearch = false;
-
-            ClientInput.Focus();
-            _clientTextBox?.SelectAll();
-        }, System.Windows.Threading.DispatcherPriority.Input);
+        // Ready for the next entry without touching the mouse.
+        FocusFieldDeferred(ClientInput);
     }
 
-
-    // =========================================================
-    // CONNECT TO INTERNAL EDITABLE TEXTBOX
-    // =========================================================
-
-    private void ClientInput_Loaded(
-        object sender,
-        RoutedEventArgs e)
-    {
-        _clientTextBox =
-            ClientInput.Template.FindName(
-                "PART_EditableTextBox",
-                ClientInput) as TextBox;
-
-        if (_clientTextBox != null)
-        {
-            _clientTextBox.TextChanged +=
-                ClientTextBox_TextChanged;
-        }
-    }
-
-    private void PlateTypeInput_Loaded(
-        object sender,
-        RoutedEventArgs e)
-    {
-        _plateTypeTextBox =
-            PlateTypeInput.Template.FindName(
-                "PART_EditableTextBox",
-                PlateTypeInput) as TextBox;
-
-        if (_plateTypeTextBox != null)
-        {
-            _plateTypeTextBox.TextChanged +=
-                PlateTypeTextBox_TextChanged;
-        }
-    }
-
-    // =========================================================
-    // SELECT ALL TEXT ON FOCUS (MOUSE OR KEYBOARD)
-    // =========================================================
-
-    private void ClientInput_GotKeyboardFocus(
-        object sender,
-        KeyboardFocusChangedEventArgs e)
-    {
-        if (_clientTextBox != null)
-        {
-            _clientTextBox.Dispatcher.InvokeAsync(
-                () => _clientTextBox.SelectAll(),
-                System.Windows.Threading.DispatcherPriority.Input);
-        }
-    }
-
-    private void PlateTypeInput_GotKeyboardFocus(
-        object sender,
-        KeyboardFocusChangedEventArgs e)
-    {
-        if (_plateTypeTextBox != null)
-        {
-            _plateTypeTextBox.Dispatcher.InvokeAsync(
-                () => _plateTypeTextBox.SelectAll(),
-                System.Windows.Threading.DispatcherPriority.Input);
-        }
-    }
-
-    // =========================================================
-    // SELECT EXISTING CLIENT TEXT WHEN USER CLICKS FIELD
-    // =========================================================
-
-    private void ClientInput_PreviewMouseLeftButtonDown(
-        object sender,
-        MouseButtonEventArgs e)
-    {
-        if (_clientTextBox == null)
-        {
-            return;
-        }
-
-        if (!_clientTextBox.IsKeyboardFocusWithin)
-        {
-            // Let focus happen naturally; GotKeyboardFocus will SelectAll.
-            ClientInput.Focus();
-            e.Handled = true;
-        }
-    }
-
-    // =========================================================
-    // SELECT EXISTING PLATE TYPE TEXT WHEN USER CLICKS FIELD
-    // =========================================================
-
-    private void PlateTypeInput_PreviewMouseLeftButtonDown(
-        object sender,
-        MouseButtonEventArgs e)
-    {
-        if (_plateTypeTextBox == null)
-        {
-            return;
-        }
-
-        if (!_plateTypeTextBox.IsKeyboardFocusWithin)
-        {
-            PlateTypeInput.Focus();
-            e.Handled = true;
-        }
-    }
-
-    // =========================================================
-    // CLIENT PREFIX SEARCH
-    // =========================================================
-
-    private void ClientTextBox_TextChanged(
-        object sender,
-        TextChangedEventArgs e)
-    {
-        if (_updatingSearch)
-        {
-            return;
-        }
-
-        if (_clientTextBox == null)
-        {
-            return;
-        }
-
-        // User is navigating the open dropdown with arrow keys — don't interfere.
-        if (ClientInput.IsDropDownOpen && ClientInput.SelectedItem != null)
-        {
-            return;
-        }
-
-        // If user starts typing while an item is selected, clear the
-        // selection so the field acts as a fresh search box.
-        if (ClientInput.SelectedItem != null)
-        {
-            _updatingSearch = true;
-            ClientInput.SelectedItem = null;
-            _updatingSearch = false;
-        }
-
-        string text = _clientTextBox.Text;
-
-        FilterClients(text);
-    }
-
-    private void FilterClients(string text)
-    {
-        if (DataContext is not ChallanViewModel viewModel)
-        {
-            return;
-        }
-
-        ICollectionView view =
-            CollectionViewSource.GetDefaultView(
-                viewModel.Clients);
-
-        string searchText = text.Trim();
-
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            view.Filter = null;
-        }
-        else
-        {
-            view.Filter = item =>
-            {
-                if (item is not Client client)
-                {
-                    return false;
-                }
-
-                return client.Name.StartsWith(
-                    searchText,
-                    StringComparison.OrdinalIgnoreCase);
-            };
-        }
-
-        _updatingSearch = true;
-        view.Refresh();
-        _updatingSearch = false;
-
-        // Refresh() causes WPF's ComboBox internals to call SelectAll()
-        // asynchronously. Defer the caret restore so it runs after that.
-        if (_clientTextBox != null)
-        {
-            var tb = _clientTextBox;
-            int caretPos = tb.Text.Length;
-            tb.Dispatcher.InvokeAsync(() =>
-            {
-                tb.SelectionStart = caretPos;
-                tb.SelectionLength = 0;
-            }, System.Windows.Threading.DispatcherPriority.Input);
-        }
-
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            ClientInput.IsDropDownOpen = true;
-        }
-    }
-
-    // =========================================================
-    // PLATE TYPE PREFIX SEARCH
-    // =========================================================
-
-    private void PlateTypeTextBox_TextChanged(
-        object sender,
-        TextChangedEventArgs e)
-    {
-        if (_updatingSearch)
-        {
-            return;
-        }
-
-        if (_plateTypeTextBox == null)
-        {
-            return;
-        }
-
-        // User is navigating the open dropdown with arrow keys — don't interfere.
-        if (PlateTypeInput.IsDropDownOpen && PlateTypeInput.SelectedItem != null)
-        {
-            return;
-        }
-
-        // If user starts typing while an item is selected, clear the
-        // selection so the field acts as a fresh search box.
-        if (PlateTypeInput.SelectedItem != null)
-        {
-            _updatingSearch = true;
-            PlateTypeInput.SelectedItem = null;
-            _updatingSearch = false;
-        }
-
-        string text = _plateTypeTextBox.Text;
-
-        FilterPlateTypes(text);
-    }
-
-    private void FilterPlateTypes(string text)
-    {
-        if (DataContext is not ChallanViewModel viewModel)
-        {
-            return;
-        }
-
-        ICollectionView view =
-            CollectionViewSource.GetDefaultView(
-                viewModel.PlateTypes);
-
-        string searchText = text.Trim();
-
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            view.Filter = null;
-        }
-        else
-        {
-            view.Filter = item =>
-            {
-                if (item is not PlateType plateType)
-                {
-                    return false;
-                }
-
-                return plateType.Code.StartsWith(
-                    searchText,
-                    StringComparison.OrdinalIgnoreCase);
-            };
-        }
-
-        _updatingSearch = true;
-        view.Refresh();
-        _updatingSearch = false;
-
-        // Refresh() causes WPF's ComboBox internals to call SelectAll()
-        // asynchronously. Defer the caret restore so it runs after that.
-        if (_plateTypeTextBox != null)
-        {
-            var tb = _plateTypeTextBox;
-            int caretPos = tb.Text.Length;
-            tb.Dispatcher.InvokeAsync(() =>
-            {
-                tb.SelectionStart = caretPos;
-                tb.SelectionLength = 0;
-            }, System.Windows.Threading.DispatcherPriority.Input);
-        }
-
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            PlateTypeInput.IsDropDownOpen = true;
-        }
-    }
-
-    // =========================================================
-    // COMMIT CLIENT INPUT
-    // =========================================================
-
-    private void CommitClientInput()
-    {
-        if (DataContext is not ChallanViewModel viewModel)
-        {
-            return;
-        }
-
-        string text =
-            _clientTextBox?.Text.Trim() ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return;
-        }
-
-        Client? client =
-            viewModel.Clients.FirstOrDefault(
-                c => string.Equals(
-                    c.Name.Trim(),
-                    text,
-                    StringComparison.OrdinalIgnoreCase));
-
-        if (client == null)
-        {
-            return;
-        }
-
-        _updatingSearch = true;
-
-        ClientInput.SelectedItem = client;
-
-        if (_clientTextBox != null)
-        {
-            _clientTextBox.Text = client.Name;
-
-            _clientTextBox.SelectionStart =
-                _clientTextBox.Text.Length;
-
-            _clientTextBox.SelectionLength = 0;
-        }
-
-        _updatingSearch = false;
-
-        ClearClientFilter();
-    }
-
-    // =========================================================
-    // COMMIT PLATE TYPE INPUT
-    // =========================================================
-
-    private void CommitPlateTypeInput()
-    {
-        if (DataContext is not ChallanViewModel viewModel)
-        {
-            return;
-        }
-
-        string text =
-            _plateTypeTextBox?.Text.Trim() ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return;
-        }
-
-        PlateType? plateType =
-            viewModel.PlateTypes.FirstOrDefault(
-                p => string.Equals(
-                    p.Code.Trim(),
-                    text,
-                    StringComparison.OrdinalIgnoreCase));
-
-        if (plateType == null)
-        {
-            return;
-        }
-
-        _updatingSearch = true;
-
-        PlateTypeInput.SelectedItem = plateType;
-
-        if (_plateTypeTextBox != null)
-        {
-            _plateTypeTextBox.Text = plateType.Code;
-
-            _plateTypeTextBox.SelectionStart =
-                _plateTypeTextBox.Text.Length;
-
-            _plateTypeTextBox.SelectionLength = 0;
-        }
-
-        _updatingSearch = false;
-
-        ClearPlateTypeFilter();
-    }
-
-    // =========================================================
-    // CLEAR CLIENT FILTER
-    // =========================================================
-
-    private void ClearClientFilter()
-    {
-        if (DataContext is not ChallanViewModel viewModel)
-        {
-            return;
-        }
-
-        ICollectionView view =
-            CollectionViewSource.GetDefaultView(
-                viewModel.Clients);
-
-        view.Filter = null;
-        view.Refresh();
-
-        ClientInput.IsDropDownOpen = false;
-    }
-
-    // =========================================================
-    // CLEAR PLATE TYPE FILTER
-    // =========================================================
-
-    private void ClearPlateTypeFilter()
-    {
-        if (DataContext is not ChallanViewModel viewModel)
-        {
-            return;
-        }
-
-        ICollectionView view =
-            CollectionViewSource.GetDefaultView(
-                viewModel.PlateTypes);
-
-        view.Filter = null;
-        view.Refresh();
-
-        PlateTypeInput.IsDropDownOpen = false;
-    }
 
     // =========================================================
     // KEYBOARD NAVIGATION
+    //
+    //   Tab          next field
+    //   Shift+Tab    previous field
+    //   Enter        next field; saves on the last field
     // =========================================================
 
-    private void ChallanView_PreviewKeyDown(
+    private void EntryForm_PreviewKeyDown(
         object sender,
         KeyEventArgs e)
     {
-        // -----------------------------------------------------
-        // CLIENT
-        // -----------------------------------------------------
+        int index = Array.FindIndex(
+            _entryFields,
+            field => field.IsKeyboardFocusWithin);
 
-        if (ClientInput.IsKeyboardFocusWithin)
-        {
-            if (e.Key == Key.Enter)
-            {
-                CommitClientInput();
-
-                MoveFocusTo(ChallanInput);
-
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Tab)
-            {
-                CommitClientInput();
-                return;
-            }
-        }
-
-        // -----------------------------------------------------
-        // PLATE TYPE
-        // -----------------------------------------------------
-
-        if (PlateTypeInput.IsKeyboardFocusWithin)
-        {
-            if (e.Key == Key.Enter)
-            {
-                CommitPlateTypeInput();
-
-                MoveFocusTo(QuantityInput);
-
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Tab)
-            {
-                CommitPlateTypeInput();
-                return;
-            }
-        }
-
-        // -----------------------------------------------------
-        // OTHER ENTER NAVIGATION
-        // -----------------------------------------------------
-
-        if (e.Key != Key.Enter)
+        // Not in a form field, or the date picker calendar is open.
+        if (index < 0 || DateInput.IsDropDownOpen)
         {
             return;
         }
 
-        // -----------------------------------------------------
-        // DATE
-        // -----------------------------------------------------
+        int step;
 
+        if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            step = 1;
+        }
+        else if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.Shift)
+        {
+            step = -1;
+        }
+        else if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            step = 1;
+        }
+        else
+        {
+            return;
+        }
+
+        if (_entryFields[index] is SuggestionBox suggestionBox)
+        {
+            suggestionBox.CommitSuggestion();
+        }
+
+        bool isLastField = index == _entryFields.Length - 1;
+
+        if (e.Key == Key.Enter && isLastField)
+        {
+            SaveEntry();
+
+            e.Handled = true;
+            return;
+        }
+
+        int target = index + step;
+
+        // Beyond either end of the form, Tab keeps its normal
+        // behaviour (e.g. Tab from the last field reaches Save).
+        if (target < 0 || target >= _entryFields.Length)
+        {
+            return;
+        }
+
+        FocusField(_entryFields[target]);
+
+        e.Handled = true;
+    }
+
+    // Select the whole value when a text field is entered,
+    // so typing replaces it.
+    private void EntryForm_GotKeyboardFocus(
+        object sender,
+        KeyboardFocusChangedEventArgs e)
+    {
+        if (e.NewFocus is TextBox textBox)
+        {
+            Dispatcher.InvokeAsync(
+                textBox.SelectAll,
+                DispatcherPriority.Input);
+        }
+
+        if (e.NewFocus is DependencyObject focused &&
+            _entryFields.FirstOrDefault(f => f == focused || f.IsAncestorOf(focused))
+                is Control field)
+        {
+            _lastField = field;
+        }
+    }
+
+    private static void FocusField(Control field)
+    {
+        switch (field)
+        {
+            case SuggestionBox suggestionBox:
+                suggestionBox.FocusInput();
+                break;
+
+            case DatePicker datePicker
+                when datePicker.Template.FindName(
+                    "PART_TextBox",
+                    datePicker) is TextBox dateTextBox:
+                dateTextBox.Focus();
+                break;
+
+            default:
+                field.Focus();
+                break;
+        }
+    }
+
+    private void FocusFieldDeferred(Control field)
+    {
+        Dispatcher.InvokeAsync(
+            () => FocusField(field),
+            DispatcherPriority.Input);
+    }
+
+    private void SaveEntry()
+    {
+        if (_viewModel.SaveChallanCommand.CanExecute(null))
+        {
+            _viewModel.SaveChallanCommand.Execute(null);
+        }
+    }
+
+
+    // =========================================================
+    // DATE: NEVER LEFT EMPTY
+    // =========================================================
+
+    private void DateInput_LostKeyboardFocus(
+        object sender,
+        KeyboardFocusChangedEventArgs e)
+    {
         if (DateInput.IsKeyboardFocusWithin)
         {
-            MoveFocusTo(ClientInput);
-
-            e.Handled = true;
             return;
         }
 
-        // -----------------------------------------------------
-        // TEXTBOXES
-        // -----------------------------------------------------
-
-        if (e.OriginalSource is TextBox textBox)
+        // If the date text was cleared, restore the last valid date.
+        Dispatcher.InvokeAsync(() =>
         {
-            if (textBox == ChallanInput)
+            if (DateInput.SelectedDate == null)
             {
-                MoveFocusTo(DescriptionInput);
+                DateInput.SetCurrentValue(
+                    DatePicker.SelectedDateProperty,
+                    _viewModel.Date);
             }
-            else if (textBox == DescriptionInput)
-            {
-                MoveFocusTo(PlateTypeInput);
-            }
-            else if (textBox == QuantityInput)
-            {
-                MoveFocusTo(AreaBillingInput);
-            }
-
-            e.Handled = true;
-            return;
-        }
-
-        // -----------------------------------------------------
-        // LAST FIELD
-        // -----------------------------------------------------
-
-        if (e.OriginalSource is CheckBox checkBox &&
-            checkBox == AreaBillingInput)
-        {
-            SaveChallan();
-
-            e.Handled = true;
-        }
+        }, DispatcherPriority.Input);
     }
 
-    // =========================================================
-    // MOVE FOCUS
-    // =========================================================
-
-    private void MoveFocusTo(Control control)
-    {
-        control.Focus();
-
-        if (control is TextBox textBox)
-        {
-            textBox.SelectAll();
-        }
-    }
 
     // =========================================================
-    // SAVE / UPDATE
+    // DIGITS-ONLY INPUT (Challan No., Quantity)
     // =========================================================
 
-    private void SaveChallan()
-    {
-        if (DataContext is ChallanViewModel viewModel)
-        {
-            if (viewModel.SaveChallanCommand.CanExecute(null))
-            {
-                viewModel.SaveChallanCommand.Execute(null);
-            }
-        }
-    }
-    // =========================================================
-    // Challan input preview
-    // =========================================================
-    private void ChallanInput_PreviewTextInput(
-    object sender,
-    TextCompositionEventArgs e)
+    private void DigitsOnly_PreviewTextInput(
+        object sender,
+        TextCompositionEventArgs e)
     {
         e.Handled = !e.Text.All(char.IsDigit);
     }
-    // =========================================================
-    // Challan input pasting prevent
-    // =========================================================
-    private void ChallanInput_Pasting(
-    object sender,
-    DataObjectPastingEventArgs e)
+
+    private void DigitsOnly_Pasting(
+        object sender,
+        DataObjectPastingEventArgs e)
     {
         if (!e.DataObject.GetDataPresent(typeof(string)))
         {
@@ -696,35 +244,34 @@ public partial class ChallanView : UserControl
         }
     }
 
-    // =========================================================
-    // Challan input increment / decrement with up/down keys
-    // =========================================================
-    private void ChallanInput_PreviewKeyDown(
-    object sender,
-    KeyEventArgs e)
-    {
-        if (DataContext is not ChallanViewModel viewModel)
-            return;
 
+    // =========================================================
+    // CHALLAN NO.: UP / DOWN TO INCREMENT / DECREMENT
+    // =========================================================
+
+    private void ChallanInput_PreviewKeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
         if (e.Key == Key.Up)
         {
-            if (viewModel.ChallanNo == null)
+            if (_viewModel.ChallanNo == null)
             {
-                viewModel.ChallanNo = 1;
+                _viewModel.ChallanNo = 1;
             }
             else
             {
-                viewModel.ChallanNo++;
+                _viewModel.ChallanNo++;
             }
 
             e.Handled = true;
         }
         else if (e.Key == Key.Down)
         {
-            if (viewModel.ChallanNo != null &&
-                viewModel.ChallanNo > 1)
+            if (_viewModel.ChallanNo != null &&
+                _viewModel.ChallanNo > 1)
             {
-                viewModel.ChallanNo--;
+                _viewModel.ChallanNo--;
             }
 
             // If empty or already 1, do nothing.

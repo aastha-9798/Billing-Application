@@ -41,6 +41,27 @@
             <Setter Property="Cursor"         Value="Hand"/>
         </Style>
 
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Height"          Value="42"/>
+            <Setter Property="MinWidth"        Value="110"/>
+            <Setter Property="Padding"         Value="16,0"/>
+            <Setter Property="FontSize"        Value="15"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Foreground"      Value="{StaticResource PrimaryTextBrush}"/>
+            <Setter Property="Background"      Value="#F2F4F7"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+        </Style>
+
+        <!-- Read-only, selectable path display -->
+        <Style x:Key="PathBoxStyle" TargetType="TextBox"
+               BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="IsReadOnly"      Value="True"/>
+            <Setter Property="FontSize"        Value="14"/>
+            <Setter Property="Background"      Value="#F8F9FC"/>
+        </Style>
+
     </UserControl.Resources>
 
 
@@ -48,10 +69,13 @@
     <!-- PAGE                                          -->
     <!-- ============================================= -->
 
-    <Grid Background="{StaticResource PageBackgroundBrush}"
-          Margin="4">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  Background="{StaticResource PageBackgroundBrush}">
+
+    <Grid Margin="4">
 
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -159,6 +183,141 @@
 
         </Border>
 
+        <!-- ========================================= -->
+        <!-- DATA & BACKUPS                            -->
+        <!-- ========================================= -->
+
+        <Border Grid.Row="2"
+                Background="{StaticResource CardBackgroundBrush}"
+                CornerRadius="14"
+                Padding="24"
+                MaxWidth="900"
+                HorizontalAlignment="Left">
+
+            <StackPanel>
+
+                <TextBlock Text="Data &amp; Backups"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           Margin="0,0,0,6"/>
+
+                <TextBlock FontSize="13"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,20">
+                    A full backup is made automatically when the app starts (once a day) and every time it closes.
+                    Kept: daily backups for 30 days, monthly backups for 12 months, and yearly backups for ever.
+                    If the database goes missing or is damaged, the app restores the latest good backup when it starts.
+                    To protect against losing this PC, choose a OneDrive / Google Drive folder or a USB drive.
+                </TextBlock>
+
+
+                <!-- Database location -->
+
+                <TextBlock Text="Database file"
+                           Style="{StaticResource FieldLabelStyle}"/>
+
+                <Grid Margin="0,0,0,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Text="{Binding DatabasePath, Mode=OneWay}"
+                             Style="{StaticResource PathBoxStyle}"/>
+
+                    <Button Grid.Column="1"
+                            Content="Open Folder"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Margin="10,0,0,0"
+                            Click="OpenDatabaseFolder_Click"/>
+                </Grid>
+
+
+                <!-- Backup folder -->
+
+                <TextBlock Text="Backup folder"
+                           Style="{StaticResource FieldLabelStyle}"/>
+
+                <Grid Margin="0,0,0,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Text="{Binding BackupFolder, Mode=OneWay}"
+                             Style="{StaticResource PathBoxStyle}"/>
+
+                    <Button Grid.Column="1"
+                            Content="Change…"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Margin="10,0,0,0"
+                            Click="ChangeBackupFolder_Click"/>
+
+                    <Button Grid.Column="2"
+                            Content="Open Folder"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Margin="10,0,0,0"
+                            Click="OpenBackupFolder_Click"/>
+                </Grid>
+
+
+                <!-- Last backup + Back up now -->
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Last backup:"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource PrimaryTextBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center">
+
+                        <TextBlock Text="{Binding LastBackupText}"
+                                   FontSize="15"
+                                   Foreground="{StaticResource PrimaryTextBrush}"/>
+
+                        <TextBlock Text="{Binding BackupStatus}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,2,0,0"/>
+
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal">
+
+                        <Button Content="Restore from Backup…"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Margin="16,0,0,0"
+                                Click="RestoreBackup_Click"/>
+
+                        <Button Content="Back Up Now"
+                                Style="{StaticResource ActionButtonStyle}"
+                                Command="{Binding BackUpNowCommand}"
+                                Margin="10,0,0,0"/>
+
+                    </StackPanel>
+                </Grid>
+
+            </StackPanel>
+
+        </Border>
+
     </Grid>
+
+    </ScrollViewer>
 
 </UserControl>

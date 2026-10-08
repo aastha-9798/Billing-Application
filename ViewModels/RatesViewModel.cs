@@ -7,7 +7,7 @@ using PlateBilling.Services;
 
 namespace PlateBilling.ViewModels;
 
-public partial class RatesViewModel : ObservableObject
+public partial class RatesViewModel : ObservableObject, IRefreshable
 {
     private readonly ClientService _clientService;
     private readonly PlateTypeService _plateTypeService;
@@ -73,6 +73,39 @@ public partial class RatesViewModel : ObservableObject
         {
             Rates.Add(rate);
         }
+    }
+
+
+    // =========================================================
+    // REFRESH (returning to this screen)
+    // =========================================================
+
+    // Picks up clients and plate types changed on other screens.
+    // Reloading the lists clears the selections, so the form is
+    // remembered first and put back afterwards.
+    public async Task RefreshAsync()
+    {
+        int? rateId = SelectedRate?.Id;
+        int? clientId = SelectedClient?.Id;
+        int? plateTypeId = SelectedPlateType?.Id;
+        string rate = NewRate;
+        string status = StatusMessage;
+
+        try
+        {
+            await LoadDataAsync();
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Unable to load rates.";
+            return;
+        }
+
+        SelectedRate = Rates.FirstOrDefault(r => r.Id == rateId);
+        SelectedClient = Clients.FirstOrDefault(c => c.Id == clientId);
+        SelectedPlateType = PlateTypes.FirstOrDefault(p => p.Id == plateTypeId);
+        NewRate = rate;
+        StatusMessage = status;
     }
 
 

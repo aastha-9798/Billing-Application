@@ -1,10 +1,17 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
+using PlateBilling.Services;
+using PlateBilling.ViewModels;
 using PlateBilling.Views;
 
 namespace PlateBilling;
 
 public partial class MainWindow : Window
 {
+    // One instance per screen for the whole session, so a screen keeps
+    // its state (form fields, filters, selection) when you come back.
+    private readonly Dictionary<Type, UserControl> _views = new();
+
     public MainWindow()
     {
         InitializeComponent();
@@ -14,49 +21,75 @@ public partial class MainWindow : Window
     }
 
 
+    // Back up the day's entries when the app is closed.
+    protected override void OnClosed(EventArgs e)
+    {
+        if (!App.SkipExitBackup)
+        {
+            App.RunBackup(BackupService.BackUp);
+        }
+
+        base.OnClosed(e);
+    }
+
+
     // =========================================================
     // NAVIGATION
     // =========================================================
 
-    private void ShowChallanEntry()
+    private void Show<TView>() where TView : UserControl, new()
     {
-        MainContent.Content = new ChallanView();
+        if (_views.TryGetValue(typeof(TView), out var view))
+        {
+            // Returning to a screen: pick up changes made on other screens.
+            if (view.DataContext is IRefreshable refreshable)
+            {
+                _ = refreshable.RefreshAsync();
+            }
+        }
+        else
+        {
+            view = new TView();
+            _views[typeof(TView)] = view;
+        }
+
+        MainContent.Content = view;
     }
 
 
-    private void ShowBillGeneration()
+    private void ShowChallanEntry()
     {
-        MainContent.Content = new BillGenerationView();
+        Show<ChallanView>();
     }
 
 
     private void ShowClients()
     {
-        MainContent.Content = new ClientsView();
+        Show<ClientsView>();
     }
 
 
     private void ShowPlateTypes()
     {
-        MainContent.Content = new PlateTypesView();
+        Show<PlateTypesView>();
     }
 
 
     private void ShowRates()
     {
-        MainContent.Content = new RatesView();
+        Show<RatesView>();
     }
 
 
     private void ShowReports()
     {
-        MainContent.Content = new ReportsView();
+        Show<ReportsView>();
     }
 
 
     private void ShowSettings()
     {
-        MainContent.Content = new SettingsView();
+        Show<SettingsView>();
     }
 
 
@@ -69,14 +102,6 @@ public partial class MainWindow : Window
         RoutedEventArgs e)
     {
         ShowChallanEntry();
-    }
-
-
-    private void BillGenerationButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        ShowBillGeneration();
     }
 
 
